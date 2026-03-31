@@ -70,7 +70,7 @@ onMount(() => {
 });
 </script>
 
-<div class="bg-white border border-(--color-border) rounded-xl shadow-sm p-5">
+<div class="bg-white border border-(--color-border) rounded-md shadow-sm p-5">
   <h3 class="text-sm font-semibold text-(--color-text-primary) mb-4">
     {title}
   </h3>
