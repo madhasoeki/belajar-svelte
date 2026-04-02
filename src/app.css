@@ -3,9 +3,7 @@
 /* =========================
    THEME VARIABLES
 ========================= */
-
 :root {
-
   /* Primary Green */
   --color-primary: #22C55E;
   --color-primary-hover: #16A34A;
@@ -31,98 +29,13 @@
   --color-info: #3B82F6;
 
   /* Radius */
-  --radius-card: 12px;
+  --radius-card: 5px;
 }
 
 /* =========================
    BASE STYLE
 ========================= */
-
 body {
   @apply bg-(--color-bg-page) text-(--color-text-primary) antialiased;
   font-family: "Inter", sans-serif;
-}
-
-/* =========================
-   LAYOUT
-========================= */
-
-.sidebar {
-  @apply bg-(--color-bg-sidebar) border-r border-(--color-border)
-}
-
-.navbar {
-  @apply bg-white border-b border-(--color-border);
-}
-
-.card {
-  @apply bg-(--color-bg-card) border border-(--color-border) rounded-(--radius-card) p-6;
-}
-
-/* =========================
-   BUTTON
-========================= */
-
-.btn-primary {
-  @apply bg-(--color-primary) text-white px-4 py-2 rounded-lg font-medium transition;
-}
-
-.btn-primary:hover {
-  @apply bg-(--color-primary-hover);
-}
-
-.btn-soft {
-  @apply bg-(--color-primary-soft) text-(--color-primary-hover) px-4 py-2 rounded-lg;
-}
-
-/* =========================
-   SIDEBAR MENU
-========================= */
-
-.menu-item {
-  @apply flex items-center gap-3 px-4 py-2 rounded-lg text-(--color-text-secondary) transition;
-}
-
-.menu-item:hover {
-  @apply bg-(--color-primary-soft);
-}
-
-.menu-item.active {
-  @apply bg-(--color-primary) text-white;
-}
-
-/* =========================
-   TABLE
-========================= */
-
-.table {
-  @apply w-full text-sm;
-}
-
-.table th {
-  @apply text-left font-semibold text-(--color-text-secondary) border-b border-(--color-border) py-3;
-}
-
-.table td {
-  @apply border-b border-(--color-border) py-3 text-(--color-text-primary);
-}
-
-/* =========================
-   BADGE
-========================= */
-
-.badge-success {
-  @apply bg-green-100 text-green-700 px-2 py-1 rounded-md text-xs font-medium;
-}
-
-.badge-warning {
-  @apply bg-amber-100 text-amber-700 px-2 py-1 rounded-md text-xs font-medium;
-}
-
-.badge-danger {
-  @apply bg-red-100 text-red-700 px-2 py-1 rounded-md text-xs font-medium;
-}
-
-.badge-info {
-  @apply bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-medium;
 }

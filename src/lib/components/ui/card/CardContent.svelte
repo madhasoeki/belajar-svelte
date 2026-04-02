@@ -1,13 +1,14 @@
 <script lang="ts">
-  let {
-    children,
-    class: className = "",
-    ...rest
-  } = $props();
+  import type { Snippet } from "svelte";
+  import type { HTMLAttributes } from "svelte/elements";
+
+  let { 
+    children, 
+    class: className = "", 
+    ...rest 
+  }: HTMLAttributes<HTMLDivElement> & { children?: Snippet } = $props();
 </script>
 
-<div class={`px-6 py-4 ${className}`}
-  {...rest}
->
+<div class={`p-6 pt-0 ${className}`} {...rest}>
   {@render children?.()}
 </div>

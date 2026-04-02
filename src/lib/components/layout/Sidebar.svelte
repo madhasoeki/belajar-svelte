@@ -20,6 +20,7 @@
         { id: 'dashboard', href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { id: 'cards', href: '/cards', icon: LayoutDashboard , label: 'Cards' },
         { id: 'button', href: '/button', icon: LayoutDashboard , label: 'Button' },
+        { id: 'input', href: '/input', icon: LayoutDashboard , label: 'Input' },
         { id: 'leads', href: '/leads', icon: UserSearch, label: 'Leads' },
         { id: 'donasi', href: '/donasi', icon: HandCoins, label: 'Input Donasi' },
         { id: 'transaksi', href: '/transaksi', icon: Receipt, label: 'Transaksi' },
