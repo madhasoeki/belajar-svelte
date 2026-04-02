@@ -3,6 +3,8 @@
   import { page } from "$app/state";
   import Sidebar from "$lib/components/layout/Sidebar.svelte";
   import Topbar from "$lib/components/layout/Topbar.svelte";
+  import { toastStore } from "$lib/stores/toast.svelte";
+  import Toast from "$lib/components/ui/toast/Toast.svelte";
 
   let { children } = $props();
 
@@ -35,7 +37,8 @@
 
   const user = {
     name: "Madha",
-    avatar: "https://argon-dashboard-pro-svelte.creative-tim.com/img/theme/team-4.jpg",
+    avatar:
+      "https://argon-dashboard-pro-svelte.creative-tim.com/img/theme/team-4.jpg",
   };
   const currentTitle = $derived(page.data.title || "Dashboard");
 </script>
@@ -58,5 +61,12 @@
     <main class="p-8 w-full">
       {@render children()}
     </main>
+  </div>
+  <div
+    class="fixed top-6 right-6 z-100 flex flex-col gap-3 pointer-events-none"
+  >
+    {#each toastStore.all as item (item.id)}
+      <Toast {item} />
+    {/each}
   </div>
 </div>
