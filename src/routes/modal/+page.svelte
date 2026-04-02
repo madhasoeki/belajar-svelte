@@ -8,14 +8,15 @@
   } from "$lib/components/ui/card";
   import Modal from "$lib/components/ui/modal/Modal.svelte";
   import Input from "$lib/components/ui/forms/Input.svelte";
+  import Button from "$lib/components/ui/button/Button.svelte"; // Pastikan path ini sesuai
   import { TriangleAlert, Trash2, CircleCheck } from "lucide-svelte";
-  import { toastStore } from "$lib/stores/toast.svelte"; // Kita gunakan toast yang baru dibuat!
+  import { toastStore } from "$lib/stores/toast.svelte";
 
   // State untuk masing-masing tipe Modal
   let showBasicModal = $state(false);
   let showFormModal = $state(false);
   let showDangerModal = $state(false);
-  let showStrictModal = $state(false); // Modal yang tidak bisa di-close sembarangan
+  let showStrictModal = $state(false);
 
   // Dummy state untuk Form dalam Modal
   let newCategoryName = $state("");
@@ -29,7 +30,7 @@
   function handleSaveForm() {
     showFormModal = false;
     toastStore.success(`Kategori "${newCategoryName}" ditambahkan.`, "Berhasil");
-    newCategoryName = ""; // Reset
+    newCategoryName = "";
   }
 </script>
 
@@ -44,7 +45,6 @@
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
     
     <div class="space-y-8">
-      
       <Card>
         <CardHeader>
           <CardTitle>1. Basic Information</CardTitle>
@@ -53,12 +53,9 @@
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <button 
-            onclick={() => (showBasicModal = true)}
-            class="px-4 py-2 bg-white border border-(--color-border) hover:bg-gray-50 text-sm font-medium rounded-lg transition"
-          >
+          <Button variant="outline" onclick={() => (showBasicModal = true)}>
             Buka Syarat & Ketentuan
-          </button>
+          </Button>
         </CardContent>
       </Card>
 
@@ -70,19 +67,14 @@
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <button 
-            onclick={() => (showFormModal = true)}
-            class="px-4 py-2 bg-(--color-primary) hover:bg-(--color-primary-hover) text-white text-sm font-medium rounded-lg transition"
-          >
+          <Button variant="primary" onclick={() => (showFormModal = true)}>
             Tambah Kategori Baru
-          </button>
+          </Button>
         </CardContent>
       </Card>
-
     </div>
 
     <div class="space-y-8">
-      
       <Card>
         <CardHeader>
           <CardTitle>3. Konfirmasi Destruktif (Danger)</CardTitle>
@@ -91,12 +83,9 @@
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <button 
-            onclick={() => (showDangerModal = true)}
-            class="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 text-sm font-medium rounded-lg transition"
-          >
-            <Trash2 size={16} /> Hapus Data Gudang
-          </button>
+          <Button variant="danger" icon={Trash2} onclick={() => (showDangerModal = true)}>
+            Hapus Data Gudang
+          </Button>
         </CardContent>
       </Card>
 
@@ -108,15 +97,11 @@
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <button 
-            onclick={() => (showStrictModal = true)}
-            class="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white text-sm font-medium rounded-lg transition"
-          >
+          <Button variant="primary" class="bg-gray-800 hover:bg-gray-900" onclick={() => (showStrictModal = true)}>
             Buka Strict Modal
-          </button>
+          </Button>
         </CardContent>
       </Card>
-
     </div>
   </div>
 </div>
@@ -133,18 +118,8 @@
   </div>
   
   {#snippet footer()}
-    <button 
-      onclick={() => (showBasicModal = false)}
-      class="px-4 py-2 bg-white border border-(--color-border) text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium transition"
-    >
-      Tutup
-    </button>
-    <button 
-      onclick={() => (showBasicModal = false)}
-      class="px-4 py-2 bg-(--color-primary) text-white hover:bg-(--color-primary-hover) rounded-lg text-sm font-medium transition"
-    >
-      Saya Mengerti
-    </button>
+    <Button variant="outline" onclick={() => (showBasicModal = false)}>Tutup</Button>
+    <Button variant="primary" onclick={() => (showBasicModal = false)}>Saya Mengerti</Button>
   {/snippet}
 </Modal>
 
@@ -162,18 +137,8 @@
   </div>
   
   {#snippet footer()}
-    <button 
-      onclick={() => (showFormModal = false)}
-      class="px-4 py-2 text-gray-500 hover:text-gray-700 text-sm font-medium transition"
-    >
-      Batal
-    </button>
-    <button 
-      onclick={handleSaveForm}
-      class="px-4 py-2 bg-(--color-primary) text-white hover:bg-(--color-primary-hover) rounded-lg text-sm font-medium transition"
-    >
-      Simpan Kategori
-    </button>
+    <Button variant="ghost" onclick={() => (showFormModal = false)}>Batal</Button>
+    <Button variant="primary" onclick={handleSaveForm}>Simpan Kategori</Button>
   {/snippet}
 </Modal>
 
@@ -192,18 +157,8 @@
   </div>
   
   {#snippet footer()}
-    <button 
-      onclick={() => (showDangerModal = false)}
-      class="px-4 py-2 w-full bg-white border border-(--color-border) text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium transition"
-    >
-      Batal
-    </button>
-    <button 
-      onclick={handleDelete}
-      class="px-4 py-2 w-full bg-red-600 text-white hover:bg-red-700 rounded-lg text-sm font-medium transition"
-    >
-      Ya, Hapus
-    </button>
+    <Button variant="outline" class="w-full" onclick={() => (showDangerModal = false)}>Batal</Button>
+    <Button variant="danger" class="w-full" onclick={handleDelete}>Ya, Hapus</Button>
   {/snippet}
 </Modal>
 
@@ -219,14 +174,16 @@
   </div>
   
   {#snippet footer()}
-    <button 
+    <Button 
+      variant="primary" 
+      class="bg-gray-900 hover:bg-black" 
+      icon={CircleCheck}
       onclick={() => {
         showStrictModal = false;
         toastStore.success("Verifikasi selesai.", "Verified");
       }}
-      class="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white hover:bg-black rounded-lg text-sm font-medium transition"
     >
-      <CircleCheck size={16} /> Verifikasi Sekarang
-    </button>
+      Verifikasi Sekarang
+    </Button>
   {/snippet}
 </Modal>

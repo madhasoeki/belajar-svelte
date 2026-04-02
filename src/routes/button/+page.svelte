@@ -1,5 +1,4 @@
 <script lang="ts">
-  // 1. Import ekosistem Card
   import {
     Card,
     CardHeader,
@@ -9,7 +8,7 @@
   } from "$lib/components/ui/card";
 
   import Button from "$lib/components/ui/button/Button.svelte";
-  import { Plus, ArrowRight, Trash, Download, Save, Send, Search } from "lucide-svelte";
+  import { Plus, ArrowRight, Trash, Download, Save, Send, Search, Bell } from "lucide-svelte";
 
   let isSubmitting = $state(false);
 
@@ -21,7 +20,7 @@
   }
 </script>
 
-<div class="p-8 space-y-8 max-w-4xl mx-auto">
+<div class="p-8 space-y-8 max-w-4xl mx-auto pb-20">
   
   <div class="border-b pb-4 mb-8">
     <h1 class="text-2xl font-bold text-gray-900">Button Showcase</h1>
@@ -103,6 +102,28 @@
         <Button variant="outline" class="w-full">Batal</Button>
         <Button variant="primary" class="w-full">Simpan</Button>
       </div>
+    </CardContent>
+  </Card>
+
+  <Card>
+    <CardHeader>
+      <CardTitle>6. Badge & Notifikasi</CardTitle>
+      <CardDescription>Indikator visual untuk menarik perhatian pengguna terhadap pembaruan atau tugas yang tertunda.</CardDescription>
+    </CardHeader>
+    <CardContent class="flex flex-wrap gap-6 items-center">
+      <Button variant="outline" icon={Bell} badge={true}>
+        Notifikasi Baru
+      </Button>
+      
+      <Button variant="primary" icon={Bell} badge={3}>
+        Pesan Masuk
+      </Button>
+
+      <Button variant="secondary" badge="99+">
+        Semua Notifikasi
+      </Button>
+
+      <Button variant="ghost" icon={Bell} badge={true} aria-label="Notifikasi" class="text-gray-600 hover:text-gray-900" />
     </CardContent>
   </Card>
 

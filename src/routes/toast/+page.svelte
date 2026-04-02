@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "$lib/components/ui/card";
   import { toastStore } from "$lib/stores/toast.svelte";
+  import Button from "$lib/components/ui/button/Button.svelte"; // Import komponen Button
   import { CircleCheck, CircleAlert, Info, TriangleAlert, Send, Trash2 } from "lucide-svelte";
 
   function triggerSuccess() {
@@ -45,33 +46,21 @@
         <CardDescription>Klik tombol di bawah untuk memunculkan berbagai variasi status notifikasi.</CardDescription>
       </CardHeader>
       <CardContent class="grid grid-cols-2 gap-4">
-        <button 
-          onclick={triggerSuccess}
-          class="flex items-center justify-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition"
-        >
-          <CircleCheck size={16} /> Success Toast
-        </button>
+        <Button variant="primary" icon={CircleCheck} onclick={triggerSuccess}>
+          Success Toast
+        </Button>
 
-        <button 
-          onclick={triggerError}
-          class="flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition"
-        >
-          <CircleAlert size={16} /> Error Toast
-        </button>
+        <Button variant="danger" icon={CircleAlert} onclick={triggerError}>
+          Error Toast
+        </Button>
 
-        <button 
-          onclick={triggerWarning}
-          class="flex items-center justify-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition"
-        >
-          <TriangleAlert size={16} /> Warning Toast
-        </button>
+        <Button variant="primary" class="bg-amber-500 hover:bg-amber-600" icon={TriangleAlert} onclick={triggerWarning}>
+          Warning Toast
+        </Button>
 
-        <button 
-          onclick={triggerInfo}
-          class="flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition"
-        >
-          <Info size={16} /> Info Toast
-        </button>
+        <Button variant="primary" class="bg-blue-500 hover:bg-blue-600" icon={Info} onclick={triggerInfo}>
+          Info Toast
+        </Button>
       </CardContent>
     </Card>
 
@@ -89,12 +78,14 @@
               <p class="text-xs text-gray-500">Kirim ke email pengurus yayasan</p>
             </div>
           </div>
-          <button 
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            class="text-xs font-bold text-(--color-primary) p-0 h-auto hover:bg-transparent hover:underline"
             onclick={() => toastStore.success("Laporan telah dikirim ke 3 antrean email.", "Email Terkirim")}
-            class="text-xs font-bold text-(--color-primary) hover:underline"
           >
             KIRIM SEKARANG
-          </button>
+          </Button>
         </div>
 
         <div class="flex items-center justify-between p-3 border border-(--color-border) rounded-lg">
@@ -105,20 +96,23 @@
               <p class="text-xs text-gray-500">Hapus semua data sesi sementara</p>
             </div>
           </div>
-          <button 
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            class="text-xs font-bold text-red-600 p-0 h-auto hover:bg-transparent hover:underline"
             onclick={() => toastStore.warning("Cache berhasil dibersihkan. Sesi Anda akan dimulai ulang.", "Cache Cleared")}
-            class="text-xs font-bold text-red-600 hover:underline"
           >
             HAPUS CACHE
-          </button>
+          </Button>
         </div>
 
-        <button 
+        <Button 
+          variant="outline" 
+          class="w-full border-dashed border-gray-300 text-gray-500 bg-transparent hover:bg-gray-50"
           onclick={triggerLong}
-          class="w-full py-2 border border-dashed border-gray-300 text-gray-500 text-xs rounded-lg hover:bg-gray-50 transition"
         >
           Trigger Notifikasi Durasi Lama (10 Detik)
-        </button>
+        </Button>
       </CardContent>
     </Card>
 
