@@ -28,7 +28,7 @@
         <CardTitle>1. Identitas & Profil</CardTitle>
         <CardDescription>Penggunaan pada Topbar untuk pengaturan akun pengguna.</CardDescription>
       </CardHeader>
-      <CardContent class="flex justify-center pt-6 bg-gray-50 rounded-lg pb-32">
+      <CardContent class="flex justify-center pt-6 rounded-lg pb-32">
         <Dropdown width="w-56">
           {#snippet trigger()}
             <button class="flex items-center gap-3 p-1 pr-3 hover:bg-gray-200/50 rounded-full transition">

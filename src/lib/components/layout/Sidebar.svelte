@@ -27,6 +27,7 @@
         { id: 'toast', href: '/toast', icon: LayoutDashboard , label: 'Toast' },
         { id: 'modal', href: '/modal', icon: LayoutDashboard , label: 'Modal' },
         { id: 'dropdown', href: '/dropdown', icon: LayoutDashboard , label: 'Dropdown' },
+        { id: 'table', href: '/table', icon: LayoutDashboard , label: 'Table' },
         { id: 'leads', href: '/leads', icon: UserSearch, label: 'Leads' },
         { id: 'donasi', href: '/donasi', icon: HandCoins, label: 'Input Donasi' },
         { id: 'transaksi', href: '/transaksi', icon: Receipt, label: 'Transaksi' },
