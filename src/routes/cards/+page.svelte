@@ -10,7 +10,7 @@
   
   // Asumsi Button dan Input sudah bisa di-import
   import Button from "$lib/components/ui/button/Button.svelte";
-  import Input from "$lib/components/ui/input/Input.svelte";
+  import Input from "$lib/components/ui/forms/Input.svelte";
   
   import { Users, AlertTriangle, CheckCircle, TrendingUp, Save } from "lucide-svelte";
 </script>
