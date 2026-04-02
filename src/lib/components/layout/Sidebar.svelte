@@ -21,6 +21,7 @@
         { id: 'cards', href: '/cards', icon: LayoutDashboard , label: 'Cards' },
         { id: 'button', href: '/button', icon: LayoutDashboard , label: 'Button' },
         { id: 'forms', href: '/forms', icon: LayoutDashboard , label: 'Forms' },
+        { id: 'badge', href: '/badge', icon: LayoutDashboard , label: 'Badge' },
         { id: 'leads', href: '/leads', icon: UserSearch, label: 'Leads' },
         { id: 'donasi', href: '/donasi', icon: HandCoins, label: 'Input Donasi' },
         { id: 'transaksi', href: '/transaksi', icon: Receipt, label: 'Transaksi' },
