@@ -1,0 +1,184 @@
+<script lang="ts">
+  import { ChevronDown, X, Check, Search } from "lucide-svelte";
+  import { fade, slide } from "svelte/transition";
+
+  interface Option {
+    value: string | number;
+    label: string;
+  }
+
+  interface MultiSelectProps {
+    label?: string;
+    options?: Option[];
+    values?: (string | number)[];
+    placeholder?: string;
+    searchPlaceholder?: string;
+    class?: string;
+    error?: string;
+    disabled?: boolean;
+  }
+
+  let {
+    label = "",
+    options = [],
+    values = $bindable([]),
+    placeholder = "Pilih opsi...",
+    searchPlaceholder = "Cari...",
+    class: className = "",
+    error = "",
+    disabled = false
+  }: MultiSelectProps = $props();
+
+  let isOpen = $state(false);
+  let searchQuery = $state("");
+  let inputRef = $state<HTMLInputElement | null>(null);
+  let multiSelectId = `multiselect-${Math.random().toString(36).slice(2, 9)}`;
+
+  // Derivasi data untuk daftar pilihan dan daftar yang terpilih
+  let filteredOptions = $derived(
+    options.filter(opt => opt.label.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  let selectedOptions = $derived(
+    options.filter(opt => values.includes(opt.value))
+  );
+
+  function toggleOption(val: string | number) {
+    if (values.includes(val)) {
+      values = values.filter(v => v !== val); // Hapus jika sudah ada
+    } else {
+      values = [...values, val]; // Tambah jika belum ada
+    }
+  }
+
+  function removeOption(e: MouseEvent, val: string | number) {
+    e.stopPropagation(); // Mencegah dropdown terbuka saat klik (x)
+    values = values.filter(v => v !== val);
+  }
+
+  function clearAll(e: MouseEvent) {
+    e.stopPropagation();
+    values = [];
+  }
+
+  function openDropdown() {
+    if (disabled) return;
+    isOpen = !isOpen;
+    if (isOpen) {
+      searchQuery = ""; // Reset pencarian saat dibuka
+      setTimeout(() => inputRef?.focus(), 50); // Fokus ke search bar otomatis
+    }
+  }
+
+  function clickOutside(node: HTMLElement) {
+    const handleClick = (e: MouseEvent) => {
+      if (!node.contains(e.target as Node)) isOpen = false;
+    };
+    document.addEventListener("click", handleClick, true);
+    return { destroy() { document.removeEventListener("click", handleClick, true); } };
+  }
+</script>
+
+<div class={`flex flex-col gap-1.5 ${className}`} use:clickOutside>
+  {#if label}
+    <label for={multiSelectId} class="text-sm font-semibold text-(--color-text-primary)">
+      {label}
+    </label>
+  {/if}
+
+  <div class="relative">
+    <button
+      id={multiSelectId}
+      type="button"
+      onclick={openDropdown}
+      {disabled}
+      class={`w-full min-h-10.5 px-3 py-1.5 flex flex-wrap items-center gap-1.5 bg-white border text-left text-sm rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-(--color-primary-soft)
+        ${error ? 'border-red-500 focus:border-red-500' : 'border-(--color-border) focus:border-(--color-primary)'}
+        ${disabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed opacity-70' : 'hover:border-gray-300 cursor-pointer'}
+      `}
+    >
+      {#if selectedOptions.length === 0}
+        <span class="text-(--color-text-muted) py-1">{placeholder}</span>
+      {:else}
+        {#each selectedOptions as opt}
+          <span class="inline-flex items-center gap-1 bg-(--color-primary-soft) text-(--color-primary) px-2 py-1 rounded-md text-xs font-medium border border-(--color-primary)/20 animate-in fade-in zoom-in duration-200">
+            {opt.label}
+            <div 
+              role="button"
+              tabindex="0"
+              onclick={(e) => removeOption(e, opt.value)}
+              onkeydown={(e) => e.key === 'Enter' && removeOption(e as any, opt.value)}
+              class="hover:bg-(--color-primary)/20 rounded-full p-0.5 cursor-pointer transition-colors"
+            >
+              <X size={12} strokeWidth={3} />
+            </div>
+          </span>
+        {/each}
+      {/if}
+
+      <div class="ml-auto flex items-center gap-1">
+        {#if selectedOptions.length > 0 && !disabled}
+          <div 
+            role="button"
+            tabindex="0"
+            onclick={clearAll} 
+            onkeydown={(e) => e.key === 'Enter' && clearAll(e as any)}
+            class="p-1 hover:bg-gray-100 rounded-md text-gray-400 hover:text-red-500 transition-colors" 
+            title="Hapus Semua"
+          >
+            <X size={14} />
+          </div>
+        {/if}
+        <ChevronDown size={16} class={`text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </div>
+    </button>
+
+    {#if isOpen}
+      <div 
+        transition:fade={{ duration: 150 }}
+        class="absolute left-0 top-[calc(100%+6px)] w-full bg-white border border-(--color-border) rounded-xl shadow-xl z-50 overflow-hidden flex flex-col"
+      >
+        <div class="p-2 border-b border-gray-100 bg-gray-50/50">
+          <div class="relative">
+            <Search size={14} class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input 
+              bind:this={inputRef}
+              bind:value={searchQuery}
+              type="text"
+              placeholder={searchPlaceholder}
+              class="w-full pl-8 pr-3 py-2 text-sm bg-white border border-gray-200 rounded-md focus:outline-none focus:border-(--color-primary) focus:ring-1 focus:ring-(--color-primary)"
+            />
+          </div>
+        </div>
+
+        <div class="max-h-60 overflow-y-auto p-1 custom-scrollbar">
+          {#if filteredOptions.length === 0}
+            <div class="px-3 py-4 text-center text-sm text-gray-500">
+              Data tidak ditemukan.
+            </div>
+          {:else}
+            {#each filteredOptions as option}
+              {@const isSelected = values.includes(option.value)}
+              <button
+                type="button"
+                onclick={() => toggleOption(option.value)}
+                class={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors
+                  ${isSelected ? 'bg-(--color-primary-soft) text-(--color-primary) font-medium' : 'text-(--color-text-secondary) hover:bg-gray-100 hover:text-(--color-text-primary)'}
+                `}
+              >
+                <span>{option.label}</span>
+                {#if isSelected}
+                  <Check size={16} class="text-(--color-primary)" />
+                {/if}
+              </button>
+            {/each}
+          {/if}
+        </div>
+      </div>
+    {/if}
+  </div>
+
+  {#if error}
+    <p class="text-xs text-red-500 mt-0.5">{error}</p>
+  {/if}
+</div>
