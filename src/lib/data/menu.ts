@@ -9,6 +9,9 @@ export const appMenus = [
   { id: "pengaturan", label: "Pengaturan", icon: Settings, href: "/pengaturan" },
   { id: "alert", label: "Alert", icon: Settings, href: "/alert" },
   { id: "avatar", label: "Avatar", icon: Settings, href: "/avatar" },
-  { id: "forms", label: "Forms", icon: Settings, href: "/forms" },
+  { id: "form", label: "Form", icon: Settings, href: "/form" },
+  { id: "card", label: "Card", icon: Settings, href: "/card" },
+  { id: "metrics", label: "Metrics", icon: Settings, href: "/metrics" },
+  { id: "charts", label: "Charts", icon: Settings, href: "/charts" },
   { id: "bantuan", label: "Bantuan", icon: HelpCircle, href: "/bantuan" },
 ];

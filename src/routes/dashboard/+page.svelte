@@ -1,14 +1,14 @@
 <script lang="ts">
-  import SummaryCard from "$lib/components/ui/cards/SummaryCard.svelte";
-  import ProgressCard from "$lib/components/ui/cards/ProgressCard.svelte";
-  import LineChart from "$lib/components/ui/charts/LineChart.svelte";
-  import PieChart from "$lib/components/ui/charts/PieChart.svelte";
-  import DonutChart from "$lib/components/ui/charts/DonutChart.svelte";
-  import BarChart from "$lib/components/ui/charts/BarChart.svelte";
-  import AreaChart from "$lib/components/ui/charts/AreaChart.svelte";
-  import HorizontalBarChart from "$lib/components/ui/charts/HorizontalBarChart.svelte";
-  import ColumnChart from "$lib/components/ui/charts/ColumnChart.svelte";
-  import FunnelChart from "$lib/components/ui/charts/FunnelChart.svelte";
+  import SummaryCard from "$lib/components/ui/card/SummaryCard.svelte";
+  import ProgressCard from "$lib/components/ui/card/ProgressCard.svelte";
+  import LineChart from "$lib/components/ui/chart/LineChart.svelte";
+  import PieChart from "$lib/components/ui/chart/PieChart.svelte";
+  import DonutChart from "$lib/components/ui/chart/DonutChart.svelte";
+  import BarChart from "$lib/components/ui/chart/BarChart.svelte";
+  import AreaChart from "$lib/components/ui/chart/AreaChart.svelte";
+  import HorizontalBarChart from "$lib/components/ui/chart/HorizontalBarChart.svelte";
+  import ColumnChart from "$lib/components/ui/chart/ColumnChart.svelte";
+  import FunnelChart from "$lib/components/ui/chart/FunnelChart.svelte";
 
   import {
     Target,
@@ -31,7 +31,7 @@
 
 <div class="grid grid-cols-1 gap-3">
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-    <SummaryCard label="Total Donasi" value="Rp 1.250.000" icon={CircleDollarSign} trend="up" trendValue="15% dari bulan lalu" variant="primary" />
+    <SummaryCard label="Total Donasi" value="Rp 1.000.250.000" icon={CircleDollarSign} trend="up" trendValue="15% dari bulan lalu" variant="primary" />
 
     <SummaryCard label="Jumlah Donatur" value="350" icon={Users} trend="down" trendValue="5% dari bulan lalu" variant="success" />
 
@@ -41,7 +41,7 @@
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-    <ProgressCard label="Target Donasi" value="Rp 75.000.000" icon={Activity} progress={65} progressText="Target: Rp 100.000.000" variant="primary" />
+    <ProgressCard label="Target Donasi" value="Rp 750.000.000" icon={Activity} progress={65} progressText="Target: Rp 100.000.000" variant="primary" />
 
     <ProgressCard label="Leads Masuk" value="320" icon={Activity} progress={80} progressText="Target: 400 Leads" variant="success"/>
 
