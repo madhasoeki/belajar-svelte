@@ -33,7 +33,7 @@
   <div class="h-16 flex items-center justify-between px-4 border-b border-(--color-border)">
     {#if !isCollapsed}
       <span class="text-xl font-bold text-(--color-primary) whitespace-nowrap overflow-hidden animate-in fade-in duration-200">
-        SIMGUDANG
+        Atsar
       </span>
     {/if}
     
