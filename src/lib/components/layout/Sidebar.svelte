@@ -1,116 +1,71 @@
-<script>
-    import { 
-        Landmark,
-        LayoutDashboard, 
-        UserSearch, 
-        HandCoins, 
-        Receipt, 
-        ClipboardCheck, 
-        Users, 
-        Trophy, 
-        LineChart, 
-        Megaphone,
-        ChevronLeft, 
-        ChevronRight 
-    } from 'lucide-svelte';
+<script lang="ts">
+  // Sesuaikan path ini dengan letak file menu.ts yang kamu buat sebelumnya
+  import { appMenus } from "$lib/data/menu"; 
+  import { ChevronLeft, ChevronRight } from "lucide-svelte";
 
-    let { active = null, isCollapsed = $bindable(false) } = $props();
+  interface SidebarProps {
+    active?: string | null;
+    isCollapsed?: boolean;
+  }
 
-    const menus = [
-        { id: 'dashboard', href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-        { id: 'cards', href: '/cards', icon: LayoutDashboard , label: 'Cards' },
-        { id: 'button', href: '/button', icon: LayoutDashboard , label: 'Button' },
-        { id: 'forms', href: '/forms', icon: LayoutDashboard , label: 'Forms' },
-        { id: 'badge', href: '/badge', icon: LayoutDashboard , label: 'Badge' },
-        { id: 'avatar', href: '/avatar', icon: LayoutDashboard , label: 'Avatar' },
-        { id: 'alert', href: '/alert', icon: LayoutDashboard , label: 'Alert' },
-        { id: 'toast', href: '/toast', icon: LayoutDashboard , label: 'Toast' },
-        { id: 'modal', href: '/modal', icon: LayoutDashboard , label: 'Modal' },
-        { id: 'dropdown', href: '/dropdown', icon: LayoutDashboard , label: 'Dropdown' },
-        { id: 'table', href: '/table', icon: LayoutDashboard , label: 'Table' },
-        { id: 'leads', href: '/leads', icon: UserSearch, label: 'Leads' },
-        { id: 'donasi', href: '/donasi', icon: HandCoins, label: 'Input Donasi' },
-        { id: 'transaksi', href: '/transaksi', icon: Receipt, label: 'Transaksi' },
-        { id: 'duplicates', href: '/duplicates', icon: ClipboardCheck, label: 'Review Duplikat' },
-        { id: 'donatur', href: '/donatur', icon: Users, label: 'Donatur' },
-        { id: 'leaderboard', href: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
-        { id: 'stats', href: '/stats', icon: LineChart, label: 'Statistik' },
-        { id: 'campaigns', href: '/campaigns', icon: Megaphone, label: 'Campaigns' },
-    ];
+  // [KUNCI FIX ERROR]: Gunakan $bindable() agar komponen luar bisa mengubah nilainya
+  let { 
+    active = null, 
+    isCollapsed = $bindable(false) 
+  }: SidebarProps = $props();
 </script>
 
-<aside class="h-screen fixed left-0 top-0 bg-white border-r border-(--color-border) flex flex-col z-50 transition-all duration-300 ease-in-out {isCollapsed ? 'w-20' : 'w-56'}">
+<aside 
+  class={`hidden md:flex flex-col h-screen border-r border-(--color-border) bg-white fixed top-0 left-0 transition-all duration-300 z-40
+    ${isCollapsed ? 'w-20' : 'w-64'}
+  `}
+>
+  <div class="h-16 flex items-center justify-between px-4 border-b border-(--color-border)">
+    {#if !isCollapsed}
+      <span class="text-xl font-bold text-(--color-primary) whitespace-nowrap overflow-hidden animate-in fade-in duration-200">
+        SIMGUDANG
+      </span>
+    {/if}
+    
+    <button 
+      type="button"
+      onclick={() => isCollapsed = !isCollapsed}
+      class={`p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-(--color-primary-soft)
+        ${isCollapsed ? 'mx-auto' : ''}
+      `}
+      aria-label={isCollapsed ? "Buka Sidebar" : "Lipat Sidebar"}
+    >
+      {#if isCollapsed}
+        <ChevronRight size={20} strokeWidth={2.5} />
+      {:else}
+        <ChevronLeft size={20} strokeWidth={2.5} />
+      {/if}
+    </button>
+  </div>
 
-    <!-- Logo -->
-    <div class="p-4 flex items-center gap-3 border-b border-(--color-border)">
-        <div class="w-10 h-10 bg-(--color-primary) rounded-xl flex items-center justify-center text-white shadow-sm shrink-0">
-            <Landmark size={22} />
-        </div>
-
+  <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1.5 custom-scrollbar">
+    {#each appMenus as menu}
+      {@const isActive = active === menu.id || active === menu.href.substring(1)}
+      
+      <a 
+        href={menu.href}
+        class={`flex items-center rounded-lg transition-all duration-200 group
+          ${isCollapsed ? 'justify-center p-3' : 'px-3 py-2.5 gap-3'}
+          ${isActive 
+            ? "bg-(--color-primary-soft) text-(--color-primary)" 
+            : "text-(--color-text-secondary) hover:bg-gray-100 hover:text-(--color-text-primary)"
+          }
+        `}
+        title={isCollapsed ? menu.label : ""}
+      >
+        <menu.icon size={20} strokeWidth={isActive ? 2.5 : 2} class="shrink-0" />
+        
         {#if !isCollapsed}
-            <div class="whitespace-nowrap">
-                <h1 class="text-lg font-semibold text-(--color-text-primary) leading-none">
-                    SAMS
-                </h1>
-                <p class="text-[10px] uppercase tracking-wider text-(--color-text-muted) mt-1">
-                    by SIDAQ
-                </p>
-            </div>
+          <span class="text-sm font-medium whitespace-nowrap overflow-hidden">
+            {menu.label}
+          </span>
         {/if}
-    </div>
-
-    <!-- Menu -->
-    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
-
-        {#each menus as menu}
-            <a 
-                href={menu.href}
-                title={isCollapsed ? menu.label : ''} 
-                class="flex items-center px-3 py-2 rounded-lg transition-all duration-200
-                {active === menu.id 
-                    ? 'bg-(--color-primary) text-white font-medium shadow-sm' 
-                    : 'text-(--color-text-secondary) hover:bg-(--color-primary-soft) hover:text-(--color-primary-hover)'}
-                {isCollapsed ? 'justify-center' : 'gap-3'}"
-            >
-
-                <menu.icon size={20} class="shrink-0" />
-
-                {#if !isCollapsed}
-                    <span class="text-sm whitespace-nowrap">
-                        {menu.label}
-                    </span>
-                {/if}
-
-            </a>
-        {/each}
-
-    </nav>
-
-    <!-- Collapse Button -->
-    <div class="p-3 border-t border-(--color-border)">
-
-        <button 
-            onclick={() => isCollapsed = !isCollapsed}
-            title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-            class="w-full flex items-center px-3 py-2 text-(--color-text-secondary) hover:bg-(--color-primary-soft) hover:text-(--color-primary-hover) transition-all duration-200 rounded-lg {isCollapsed ? 'justify-center' : 'gap-3'}"
-        >
-
-            <div class="shrink-0">
-                {#if isCollapsed}
-                    <ChevronRight size={20} />
-                {:else}
-                    <ChevronLeft size={20} />
-                {/if}
-            </div>
-
-            {#if !isCollapsed}
-                <span class="text-sm whitespace-nowrap">
-                    Sembunyikan Sidebar
-                </span>
-            {/if}
-
-        </button>
-
-    </div>
-
+      </a>
+    {/each}
+  </nav>
 </aside>

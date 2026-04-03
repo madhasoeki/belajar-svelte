@@ -6,7 +6,8 @@
   interface ButtonProps extends HTMLButtonAttributes {
     children?: Snippet; 
     variant?: "primary" | "secondary" | "outline" | "ghost" | "danger";
-    size?: "sm" | "md" | "lg";
+    // [UPDATE 1]: Tambahkan "icon" ke dalam pilihan size
+    size?: "sm" | "md" | "lg" | "icon"; 
     icon?: any; 
     iconPosition?: "left" | "right";
     isLoading?: boolean;
@@ -43,12 +44,14 @@
     sm: "h-8 px-3 text-sm",
     md: "h-10 px-4 text-sm",
     lg: "h-12 px-6 text-base",
+    icon: "h-10 w-10", 
   };
 
   const iconSizes = {
     sm: 16,
     md: 18,
-    lg: 20
+    lg: 20,
+    icon: 20 
   };
 </script>
 
@@ -73,7 +76,8 @@
   {/if}
 
   {#if badge}
-    <span class={`absolute -top-1.5 -right-1.5 flex items-center justify-center font-bold text-white bg-red-500 border-2 border-white rounded-full 
+    <span class={`absolute flex items-center justify-center font-bold text-white bg-red-500 border-2 border-white rounded-full 
+      ${size === 'icon' ? 'top-0 right-0' : '-top-1.5 -right-1.5'} 
       ${typeof badge === 'boolean' ? 'w-3 h-3' : 'px-1 min-w-5 h-5 text-[10px]'}`}
     >
       {typeof badge === 'boolean' ? '' : badge}
