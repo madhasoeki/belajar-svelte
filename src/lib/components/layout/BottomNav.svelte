@@ -5,23 +5,25 @@
   import { page } from "$app/state";
 
   let showMore = $state(false);
-  
-  // State untuk melacak menu parent mana yang sedang dibuka children-nya di mobile
   let activeSubMenu = $state<any>(null);
-
   const currentPath = $derived(page.url.pathname);
 
-  const MAX_VISIBLE = 4;
-  const visibleMenus = appMenus.slice(0, MAX_VISIBLE);
-  const hiddenMenus = appMenus.slice(MAX_VISIBLE);
+  const mainMenu = appMenus.find((m) => m.main);
+  const regularMenus = appMenus.filter((m) => !m.main);
+
+  const MAX_REGULAR = 3;
+  const visibleRegularMenus = regularMenus.slice(0, MAX_REGULAR);
+  const hiddenMenus = regularMenus.slice(MAX_REGULAR);
   const hasMore = hiddenMenus.length > 0;
 
-  // Fungsi penanganan klik cerdas untuk mobile
+  const leftMenus = visibleRegularMenus.slice(0, 2);
+  const rightMenus = visibleRegularMenus.slice(2);
+
   function handleMenuClick(e: Event, menu: any) {
     if (menu.children) {
-      e.preventDefault(); // Jangan pindah halaman dulu
-      activeSubMenu = menu; // Buka panel sub-menu
-      showMore = false; // Tutup panel 'Lainnya' jika sedang terbuka
+      e.preventDefault();
+      activeSubMenu = menu;
+      showMore = false;
     } else {
       showMore = false;
       activeSubMenu = null;
@@ -35,9 +37,9 @@
 </script>
 
 <nav class="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-(--color-border) z-50 pb-safe">
-  <div class="flex justify-around items-center h-16 px-2">
+  <div class="grid grid-cols-5 items-center h-16 px-1">
     
-    {#each visibleMenus as menu}
+    {#each leftMenus as menu}
       <a 
         href={menu.href || '#'}
         onclick={(e) => handleMenuClick(e, menu)}
@@ -45,7 +47,44 @@
           ${currentPath.startsWith(menu.href || menu.id) ? "text-(--color-primary)" : "text-gray-500 hover:text-gray-900"}
         `}
       >
-        <menu.icon size={20} strokeWidth={currentPath.startsWith(menu.href || menu.id) ? 2.5 : 2} />
+        <menu.icon size={22} strokeWidth={currentPath.startsWith(menu.href || menu.id) ? 2.5 : 2} />
+        <span class="text-[10px] font-medium">{menu.label}</span>
+      </a>
+    {/each}
+
+    {#if mainMenu}
+      <div class="relative flex flex-col items-center justify-center w-full h-full gap-1">
+        
+        <a 
+          href={mainMenu.href || '#'}
+          onclick={(e) => handleMenuClick(e, mainMenu)}
+          class="absolute -top-5 flex items-center justify-center w-13 h-13 rounded-full bg-(--color-primary) text-white shadow-lg shadow-(--color-primary)/40 border-2 border-white transition-transform active:scale-95 z-10"
+        >
+          <mainMenu.icon size={24} strokeWidth={2.5} />
+        </a>
+
+        <div class="h-5.5 w-5.5" aria-hidden="true"></div>
+
+        <span class={`text-[10px] font-bold
+          ${currentPath.startsWith(mainMenu.href || mainMenu.id) ? "text-(--color-primary)" : "text-gray-600"}
+        `}>
+          {mainMenu.label}
+        </span>
+        
+      </div>
+    {:else}
+      <div class="w-full h-full"></div>
+    {/if}
+
+    {#each rightMenus as menu}
+      <a 
+        href={menu.href || '#'}
+        onclick={(e) => handleMenuClick(e, menu)}
+        class={`flex flex-col items-center justify-center w-full h-full gap-1 
+          ${currentPath.startsWith(menu.href || menu.id) ? "text-(--color-primary)" : "text-gray-500 hover:text-gray-900"}
+        `}
+      >
+        <menu.icon size={22} strokeWidth={currentPath.startsWith(menu.href || menu.id) ? 2.5 : 2} />
         <span class="text-[10px] font-medium">{menu.label}</span>
       </a>
     {/each}
@@ -58,9 +97,9 @@
         `}
       >
         {#if showMore}
-          <X size={20} strokeWidth={2.5} />
+          <X size={22} strokeWidth={2.5} />
         {:else}
-          <MoreHorizontal size={20} strokeWidth={2} />
+          <MoreHorizontal size={22} strokeWidth={2} />
         {/if}
         <span class="text-[10px] font-medium">Lainnya</span>
       </button>

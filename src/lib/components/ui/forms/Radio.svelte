@@ -57,7 +57,7 @@
     
     {#if label}
       <span class={`text-sm font-medium select-none transition-colors
-        ${disabled ? "text-(--color-text-muted)" : "text-(--color-text-primary) group-hover:text-(--color-primary-hover)"}
+        ${disabled ? "text-(--color-text-muted)" : "text-(--color-text-secondary) group-hover:text-(--color-primary-hover)"}
       `}>
         {label}
       </span>

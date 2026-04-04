@@ -10,12 +10,14 @@ import {
   TableProperties,
   PanelTop,
   Activity,
-  PieChart
+  PieChart,
+  HandCoins
 } from "lucide-svelte";
 
 export const appMenus = [
   // 1. MENU BISNIS UTAMA
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { id: "input-donasi", label: "Input Donasi", icon: HandCoins, href: "/input-donasi", main:true },
   { id: "transaksi", label: "Transaksi", icon: Receipt, href: "/transaksi" },
   { 
     id: "donatur", 

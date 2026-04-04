@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronDown, Check } from "lucide-svelte";
+  import { ChevronDown, Search } from "lucide-svelte";
 
   export interface SelectOption {
     value: any;
@@ -14,6 +14,7 @@
     options: SelectOption[];
     placeholder?: string;
     disabled?: boolean;
+    searchable?: boolean;
     class?: string;
     id?: string;
   }
@@ -27,13 +28,23 @@
     options = [],
     placeholder = "Pilih salah satu...",
     disabled = false,
+    searchable = false,
     class: wrapperClass = "",
   }: SelectProps = $props();
 
   let isOpen = $state(false);
   let container: HTMLElement;
+  let searchQuery = $state("");
+  let searchInputEl = $state<HTMLInputElement | null>(null);
 
-  // Mencari label dari opsi yang sedang dipilih untuk ditampilkan di tombol
+  const filteredOptions = $derived(
+    searchQuery.trim() === "" 
+      ? options 
+      : options.filter((opt) => 
+          opt.label.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+  );
+
   const selectedLabel = $derived(
     options.find((opt) => opt.value === value)?.label,
   );
@@ -41,28 +52,33 @@
   function toggleOpen() {
     if (!disabled) {
       isOpen = !isOpen;
+      if (isOpen) {
+        searchQuery = "";
+      }
     }
   }
 
   function selectOption(val: any) {
     value = val;
-    isOpen = false; // Otomatis tutup dropdown setelah milih
+    isOpen = false;
   }
 
-  // Deteksi klik di luar komponen untuk menutup dropdown
   function handleClickOutside(event: MouseEvent) {
     if (isOpen && container && !container.contains(event.target as Node)) {
       isOpen = false;
     }
   }
+
+  $effect(() => {
+    if (isOpen && searchInputEl) {
+      setTimeout(() => searchInputEl?.focus(), 10);
+    }
+  });
 </script>
 
 <svelte:window onclick={handleClickOutside} />
 
-<div
-  class={`flex flex-col gap-1.5 w-full ${wrapperClass}`}
-  bind:this={container}
->
+<div class={`flex flex-col gap-1.5 w-full ${wrapperClass}`} bind:this={container}>
   {#if label}
     <label for={id} class="text-sm font-medium text-(--color-text-secondary)">
       {label}
@@ -82,9 +98,7 @@
         ${isOpen ? "border-(--color-primary) ring-2 ring-(--color-primary-soft)" : ""}
       `}
     >
-      <span
-        class={`truncate ${!selectedLabel ? "text-(--color-text-muted)" : "text-(--color-text-primary)"}`}
-      >
+      <span class={`truncate ${!selectedLabel ? "text-(--color-text-muted)" : "text-(--color-text-primary)"}`}>
         {selectedLabel || placeholder}
       </span>
       <ChevronDown
@@ -94,11 +108,24 @@
     </button>
 
     {#if isOpen}
-      <div
-        class="absolute z-50 w-full mt-1 bg-white border border-(--color-border) rounded-lg shadow-lg overflow-hidden"
-      >
+      <div class="absolute z-50 w-full mt-1 bg-white border border-(--color-border) rounded-lg shadow-lg overflow-hidden flex flex-col">
+        
+        {#if searchable}
+          <div class="flex items-center gap-2 px-3 py-2 border-b border-(--color-border) bg-gray-50/50 sticky top-0">
+            <Search size={16} class="text-(--color-text-muted) shrink-0" />
+            <input
+              type="text"
+              bind:this={searchInputEl}
+              bind:value={searchQuery}
+              placeholder="Cari..."
+              class="w-full text-sm bg-transparent outline-none text-(--color-text-primary)"
+              onclick={(e) => e.stopPropagation()} 
+            />
+          </div>
+        {/if}
+
         <ul class="max-h-60 overflow-y-auto p-1">
-          {#each options as option (option.value)}
+          {#each filteredOptions as option (option.value)}
             <button
               type="button"
               onclick={() => selectOption(option.value)}
@@ -113,6 +140,10 @@
             >
               <span class="truncate">{option.label}</span>
             </button>
+          {:else}
+            <div class="px-3 py-4 text-center text-sm text-(--color-text-muted)">
+              Tidak ada hasil untuk "{searchQuery}"
+            </div>
           {/each}
         </ul>
       </div>

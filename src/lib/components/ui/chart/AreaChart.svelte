@@ -113,7 +113,7 @@
     iconColor={iconColor} 
     class="pb-2" 
   />
-  <CardContent class="pt-0">
+  <CardContent class="pt-0 pl-1!">
     <div bind:this={chartEl} class="w-full"></div>
   </CardContent>
 </Card>

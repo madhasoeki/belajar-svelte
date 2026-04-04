@@ -1,5 +1,6 @@
 <script lang="ts">
   import { formatNumber } from "$lib/utils/formatter";
+  import { goto } from "$app/navigation";
   import { Plus, CircleDollarSign, Users, CreditCard, Activity, Calendar, Trophy, Clock, TrendingUp, PieChart, BarChart3 } from "lucide-svelte";
 
   import { Card, CardHeader, CardContent, SummaryCard, ProgressCard, SimpleTableCard, MobileOverviewCard, LeaderboardItem } from "$lib/components/ui/card";
@@ -45,7 +46,7 @@
   }
 </script>
 
-<div class="max-w-7xl mx-auto flex flex-col gap-4 md:gap-6 w-full overflow-x-hidden" >
+<div class="max-w-full mx-auto flex flex-col gap-4 md:gap-6 w-full overflow-x-hidden" >
   <div class="flex flex-col md:flex-row justify-between items-end md:items-center w-full gap-4" >
     <div class="flex flex-row-reverse md:flex-row items-center gap-2 sm:gap-3 text-gray-800 min-w-0 w-full md:w-auto order-1" >
       <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
@@ -70,7 +71,8 @@
       <div class="hidden md:block shrink-0">
         <Button
           variant="primary"
-          class="flex justify-center items-center gap-2 px-4 shadow-sm"
+          class="flex justify-center items-center gap-2 px-4 shadow-sm cursor-pointer"
+          onclick={() => goto("/input-donasi")}
         >
           <Plus size={16} />
           <span>Input Donasi</span>
@@ -280,6 +282,6 @@
   <FloatingActionButton
     icon={Plus}
     ariaLabel="Input Donasi"
-    onclick={() => console.log("Buka modal donasi")}
+    onclick={() => goto("/input-donasi")}
   />
 </div>

@@ -3,7 +3,6 @@
   import type { HTMLAttributes } from "svelte/elements";
   import CardTitle from "./CardTitle.svelte";
   import CardDescription from "./CardDescription.svelte";
-  // [BARU] Import komponen Badge milikmu
   import Badge from "$lib/components/ui/badge/Badge.svelte";
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
