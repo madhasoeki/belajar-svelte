@@ -4,6 +4,7 @@ export { default as DatePicker } from "./DatePicker.svelte";
 export { default as DateRangePicker } from "./DateRangePicker.svelte";
 export { default as Input } from "./Input.svelte";
 export { default as MultiSelect } from "./MultiSelect.svelte";
+export { default as PhoneAutocomplete } from "./PhoneAutocomplete.svelte";
 export { default as Radio } from "./Radio.svelte";
 export { default as RichTextEditor } from "./RichTextEditor.svelte";
 export { default as Select } from "./Select.svelte";

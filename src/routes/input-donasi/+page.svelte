@@ -8,10 +8,13 @@
     Select,
     Radio,
     DatePicker,
+    PhoneAutocomplete, // [BARU] Impor komponen baru
   } from "$lib/components/ui/forms";
 
   import { User, Phone, Wallet, FileText, CheckCircle2 } from "lucide-svelte";
   import { formatNumber } from "$lib/utils/formatter";
+  import { apiClient } from "$lib/utils/api";
+  import { API_ENDPOINTS } from "$lib/constans/endpoints";
 
   // --- STATE FORMULIR ---
   let donorGreeting = $state("Kak");
@@ -22,10 +25,17 @@
   let selectedSumber = $state("");
   let rawAmount = $state<number | null>(null);
   let donationDate = $state(new Date().toISOString().split("T")[0]);
+  let donaturId = $state("");
+  let lastSelectedPhone = $state("");
+
+  $effect(() => {
+    if (donorPhone !== lastSelectedPhone) {
+      donaturId = "";
+    }
+  });
 
   const greetings = ["Kak", "Ayah", "Bunda", "Bapak", "Ibu"];
 
-  // Opsi Data (Telah diubah menjadi format objek untuk SelectOption)
   const programs = [
     { label: "Wakaf Sumur", value: "Wakaf Sumur" },
     { label: "Pembangunan Masjid", value: "Pembangunan Masjid" },
@@ -47,63 +57,103 @@
     { label: "Story WhatsApp", value: "Story WhatsApp" },
   ];
 
-  // Quick Nominal
   const quickAmounts = [5000, 10000, 25000, 50000, 100000];
 
-  // State turunan untuk validasi
+  // --- VALIDASI ---
   const phoneError = $derived(
-    donorPhone.trim() !== "" && !donorPhone.startsWith("628") 
-      ? "Nomor harus diawali dengan 628 (bukan 08)" 
-      : ""
+    donorPhone.trim() !== "" && !donorPhone.startsWith("628")
+      ? "Nomor harus diawali dengan 628 (bukan 08)"
+      : "",
   );
 
-  // 2. Validasi Tombol Simpan (Semua wajib terisi & HP wajib valid)
   const isValid = $derived(
     donorName.trim() !== "" &&
-    donorPhone.startsWith("628") &&
-    donorPhone.length >= 10 && // Tambahan logis: minimal 10 angka
-    selectedProgram !== "" &&
-    selectedRekening !== "" &&
-    selectedSumber !== "" &&
-    rawAmount !== null && rawAmount > 0 &&
-    donationDate !== ""
+      donorPhone.startsWith("628") &&
+      donorPhone.length >= 10 &&
+      selectedProgram !== "" &&
+      selectedRekening !== "" &&
+      selectedSumber !== "" &&
+      rawAmount !== null &&
+      rawAmount > 0 &&
+      donationDate !== "",
   );
 
   function setQuickAmount(val: number) {
     rawAmount = val;
   }
 
-  function handleSubmit(e: Event) {
+  // [BARU] Fungsi untuk menangani data yang dipilih dari Autocomplete
+  function handleSelectDonatur(donatur: {
+    id: string;
+    nama: string;
+    sapaan: string;
+    phone: string;
+  }) {
+    donaturId = donatur.id;
+    lastSelectedPhone = donatur.phone; // Kunci nomor hp untuk perbandingan $effect di atas
+
+    donorName = donatur.nama;
+    donorGreeting = donatur.sapaan || "Kak";
+
+    toastStore.info(
+      `Data ${donorGreeting} ${donorName} otomatis diisi.`,
+      "Donatur Ditemukan",
+    );
+  }
+
+  async function handleSubmit(e: Event) {
     e.preventDefault();
     if (!isValid) return;
 
+    let isLoading = true;
+
     const payload = {
-      greeting: donorGreeting,
-      name: donorName,
-      phone: donorPhone,
-      program: selectedProgram,
-      donationDate: donationDate,
-      amount: rawAmount,
-      rekening: selectedRekening,
-      sumber: selectedSumber,
-      date: new Date().toISOString(),
+      donatur_id: donaturId, // Terisi jika klik dropdown, kosong jika baru
+      nama_donatur: donorName, // Tetap dikirim agar backend bisa insert jika donatur_id kosong
+      sapaan: donorGreeting, // Tetap dikirim
+      nomor_hp_donatur: donorPhone, // Tetap dikirim
+
+      tanggal_transaksi: donationDate, // Sesuai JSON Golang
+      program: selectedProgram, // Sesuai JSON Golang
+      rekening: selectedRekening, // Sesuai JSON Golang
+      nominal: rawAmount, // Sesuai JSON Golang
+      sumber: selectedSumber, // Sesuai JSON Golang
+      status: "success", // Langsung "success" seperti kesepakatan
     };
 
-    console.log("Submit Data:", payload);
+    try {
+      const response = await apiClient.post(
+        API_ENDPOINTS.DONASI.CREATE,
+        payload,
+      );
+      console.log("Response dari server:", response);
 
-    toastStore.success(
-      `Donasi Rp ${formatNumber(Number(rawAmount), "standard")} atas nama ${donorName} telah dicatat.`,
-      "Berhasil!"
-    );
+      toastStore.success(
+        `Donasi Rp ${formatNumber(Number(rawAmount), "standard")} atas nama ${donorName} telah dicatat.`,
+        "Berhasil!",
+      );
 
-    donorName = "";
-    donorPhone = "";
-    selectedProgram = "";
-    selectedRekening = "";
-    selectedSumber = "";
-    rawAmount = null;
-    donorGreeting = "Kak"; 
-    document.getElementById("name")?.focus();
+      donaturId = "";
+      lastSelectedPhone = "";
+      donorName = "";
+      donorPhone = "";
+      selectedProgram = "";
+      selectedRekening = "";
+      selectedSumber = "";
+      rawAmount = null;
+      donorGreeting = "Kak";
+
+      // Kembalikan fokus ke nomor HP (karena sekarang posisinya pertama)
+      document.getElementById("phone-auto")?.focus();
+    } catch (error: any) {
+      toastStore.error(
+        error.message ||
+          "Gagal menyimpan donasi. Periksa koneksi atau validasi server.",
+        "Input Gagal",
+      );
+    } finally {
+      isLoading = false;
+    }
   }
 </script>
 
@@ -128,21 +178,23 @@
               {/each}
             </div>
           </div>
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <PhoneAutocomplete
+              id="phone-auto"
+              label="Nomor WhatsApp *"
+              placeholder="6281234567890"
+              bind:value={donorPhone}
+              error={phoneError}
+              onSelectDonatur={handleSelectDonatur}
+            />
+
             <Input
               label="Nama Lengkap *"
               type="text"
               iconLeft={User}
               placeholder="Contoh: Hamba Allah"
               bind:value={donorName}
-            />
-            <Input
-              label="Nomor WhatsApp"
-              type="tel"
-              iconLeft={Phone}
-              placeholder="6281234567890"
-              bind:value={donorPhone}
-              error={phoneError}
             />
           </div>
         </CardContent>
@@ -157,6 +209,7 @@
         />
         <CardContent class="pt-4 flex flex-col gap-5">
           <DatePicker label="Tanggal Transaksi *" bind:value={donationDate} />
+
           <Select
             label="Program Tujuan *"
             options={programs}
@@ -219,9 +272,9 @@
             </div>
             <div class="flex justify-between items-start gap-4">
               <span class="text-gray-500">Donatur</span>
-              <span class="font-semibold text-gray-900 text-right"
-                >{donorName || "-"}</span
-              >
+              <span class="font-semibold text-gray-900 text-right">
+                {donorName ? `${donorGreeting} ${donorName}` : "-"}
+              </span>
             </div>
             <div class="flex justify-between items-start gap-4">
               <span class="text-gray-500">Program</span>
@@ -273,7 +326,8 @@
 
         {#if !isValid}
           <p class="text-[11px] text-center text-gray-400 font-medium px-2">
-            Pastikan semua kolom bertanda (*) terisi dan format Nomor WhatsApp diawali 628.
+            Pastikan semua kolom bertanda (*) terisi dan format Nomor WhatsApp
+            diawali 628.
           </p>
         {/if}
       </div>
