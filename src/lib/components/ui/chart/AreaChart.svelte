@@ -1,23 +1,39 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Card, CardHeader, CardTitle, CardContent } from "$lib/components/ui/card";
+  import { Card, CardHeader, CardContent } from "$lib/components/ui/card";
+  import { formatNumber } from "$lib/utils/formatter";
 
   let {
+    subtitle, 
+    badge,   
+    icon: Icon, 
+    iconColor = "text-(--color-primary)",
     title = "Donation Trend",
     categories = [],
     series = [],
     height = 320,
+    formatType = "standard", 
+    unit = "",  
   }: {
     title?: string;
+    subtitle?: string;
+    badge?: string;
+    icon?: any;
+    iconColor?: string;
     categories: string[];
     series: { name: string; data: number[] }[];
     height?: number;
+    formatType?: "currency" | "standard";
+    unit?: string;
   } = $props();
 
   let chartEl: HTMLDivElement;
 
   onMount(() => {
     let chartInstance: any;
+
+    const rootStyles = getComputedStyle(document.documentElement);
+    const primaryColor = rootStyles.getPropertyValue('--color-primary').trim() || "#22c55e";
 
     import("apexcharts").then(({ default: ApexCharts }) => {
       chartInstance = new ApexCharts(chartEl, {
@@ -26,10 +42,11 @@
           height,
           toolbar: { show: false },
           fontFamily: 'Inter, sans-serif',
-          sparkline: { enabled: false }
+          sparkline: { enabled: false },
+          zoom: { enabled: false }
         },
         series,
-        colors: ["#22c55e"], // Hijau Utama SAMS
+        colors: [primaryColor],
         stroke: { curve: "smooth", width: 3 },
         markers: { size: 0, hover: { size: 6 } },
         fill: {
@@ -50,12 +67,34 @@
           categories,
           axisBorder: { show: false },
           axisTicks: { show: false },
-          labels: { style: { colors: "#64748b", fontSize: "12px" } }
+          tickAmount: 5, 
+          labels: { 
+            style: { colors: "#64748b", fontSize: "12px" },
+            hideOverlappingLabels: true 
+          }
         },
         yaxis: {
-          labels: { style: { colors: "#64748b", fontSize: "12px" } }
+          labels: { 
+            style: { colors: "#64748b", fontSize: "12px" },
+            formatter: function (value: number) {
+              if (formatType === "currency") {
+                return "Rp " + formatNumber(value, "compact");
+              }
+              return formatNumber(value, "standard");
+            }
+          }
         },
-        tooltip: { theme: "light" },
+        tooltip: { 
+          theme: "light",
+          y: {
+            formatter: function (value: number) {
+              if (formatType === "currency") {
+                return formatNumber(value, "currency");
+              }
+              return unit ? `${formatNumber(value, "standard")} ${unit}` : formatNumber(value, "standard");
+            }
+          }
+        },
         dataLabels: { enabled: false }
       });
       chartInstance.render();
@@ -65,11 +104,16 @@
   });
 </script>
 
-<Card class="transition-all duration-200 hover:shadow-md">
-  <CardHeader class="pb-0">
-    <CardTitle class="text-base text-(--color-text-primary)">{title}</CardTitle>
-  </CardHeader>
-  <CardContent class="pt-4">
-    <div bind:this={chartEl}></div>
+<Card class="w-full h-full shadow-sm">
+  <CardHeader 
+    title={title} 
+    description={subtitle} 
+    badge={badge} 
+    icon={Icon} 
+    iconColor={iconColor} 
+    class="pb-2" 
+  />
+  <CardContent class="pt-0">
+    <div bind:this={chartEl} class="w-full"></div>
   </CardContent>
 </Card>

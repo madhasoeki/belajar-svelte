@@ -3,11 +3,19 @@
   import { Card, CardHeader, CardTitle, CardContent } from "$lib/components/ui/card";
 
   let {
+    subtitle, // [BARU]
+    badge,    // [BARU]
+    icon: Icon, // [BARU]
+    iconColor = "text-(--color-primary)", // [BARU]
     title = "Top Campaigns",
     categories = [],
     series = [],
     height = 320
   }: {
+    subtitle?: string;
+    badge?: string;
+    icon?: any;
+    iconColor?: string;
     title?: string;
     categories: string[];
     series: { name: string; data: number[] }[];
@@ -59,10 +67,15 @@
   });
 </script>
 
-<Card class="transition-all duration-200 hover:shadow-md">
-  <CardHeader class="pb-0">
-    <CardTitle class="text-base text-(--color-text-primary)">{title}</CardTitle>
-  </CardHeader>
+<Card class="w-full h-full shadow-sm">
+  <CardHeader 
+    title={title} 
+    description={subtitle} 
+    badge={badge} 
+    icon={Icon} 
+    iconColor={iconColor} 
+    class="pb-0" 
+  />
   <CardContent class="pt-4">
     <div bind:this={chartEl}></div>
   </CardContent>

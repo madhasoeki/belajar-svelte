@@ -30,11 +30,9 @@
 
   const base = "inline-flex items-center justify-center font-semibold transition-all whitespace-nowrap border border-transparent";
 
-  // MENGGUNAKAN VARIABEL TEMA
   const variants = {
     primary: "bg-(--color-primary) text-white",
     secondary: "bg-(--color-primary-soft) text-(--color-primary-hover)",
-    // Kita gunakan utilitas Tailwind untuk transparansi agar sinkron dengan variabel status
     success: "bg-(--color-success)/10 text-(--color-success) border-(--color-success)/20",
     warning: "bg-(--color-warning)/10 text-(--color-warning) border-(--color-warning)/20",
     danger: "bg-(--color-danger)/10 text-(--color-danger) border-(--color-danger)/20",

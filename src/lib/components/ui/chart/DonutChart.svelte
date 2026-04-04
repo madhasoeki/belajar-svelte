@@ -3,11 +3,19 @@
   import { Card, CardHeader, CardTitle, CardContent } from "$lib/components/ui/card";
 
   let {
+    subtitle, // [BARU]
+    badge,    // [BARU]
+    icon: Icon, // [BARU]
+    iconColor = "text-(--color-primary)", // [BARU]
     title = "Donation Distribution",
     labels = [],
     series = [],
     height = 320,
   }: {
+    subtitle?: string;
+    badge?: string;
+    icon?: any;
+    iconColor?: string;
     title?: string;
     labels: string[];
     series: number[];
@@ -62,11 +70,16 @@
   });
 </script>
 
-<Card class="transition-all duration-200 hover:shadow-md">
-  <CardHeader class="pb-2">
-    <CardTitle class="text-base text-(--color-text-primary)">{title}</CardTitle>
-  </CardHeader>
-  <CardContent>
-    <div bind:this={chartEl} class="flex justify-center"></div>
+<Card class="w-full h-full shadow-sm">
+  <CardHeader 
+    title={title} 
+    description={subtitle} 
+    badge={badge} 
+    icon={Icon} 
+    iconColor={iconColor} 
+    class="pb-2" 
+  />
+  <CardContent class="pt-0">
+    <div bind:this={chartEl} class="w-full"></div>
   </CardContent>
 </Card>

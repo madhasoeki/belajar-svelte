@@ -36,18 +36,18 @@
   />
 </svelte:head>
 
-<div class="flex min-h-screen bg-(--color-bg-page)">
+<div class="flex min-h-screen w-full overflow-x-clip bg-(--color-bg-page)">
   
   <Sidebar {active} bind:isCollapsed />
   
   <div
-    class="flex-1 flex flex-col transition-all duration-300 ease-in-out pb-24 md:pb-0 {isCollapsed
+    class="min-w-0 flex-1 flex flex-col transition-all duration-300 ease-in-out pb-24 md:pb-0 {isCollapsed
       ? 'md:ml-20'
       : 'md:ml-64'}"
   >
     <Topbar title={currentTitle} {notifications} {user} />
     
-    <main class="p-4 md:p-8 w-full flex-1">
+    <main class="p-4 md:p-8 w-full min-w-0 flex-1">
       {@render children()}
     </main>
   </div>

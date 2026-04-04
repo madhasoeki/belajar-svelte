@@ -11,6 +11,7 @@
     enabledGranularities?: Array<"day" | "month" | "year">; 
     label?: string;
     class?: string;
+    align?: "left" | "right";
   }
 
   let {
@@ -19,10 +20,13 @@
     granularity = $bindable("day"),
     enabledGranularities = ["day", "month", "year"],
     label = "Pilih Tanggal",
+    align = "left",
     class: className = ""
   }: DateRangeProps = $props();
 
   let isOpen = $state(false);
+  let triggerButton: HTMLButtonElement | null = null;
+  let popoverStyle = $state("");
 
   // [NEW] Dictionary untuk menerjemahkan key preset menjadi label di tombol
   const presetLabels: Record<string, string> = {
@@ -172,6 +176,32 @@
     isOpen = false;
   }
 
+  function updatePopoverPosition() {
+    if (!isOpen || !triggerButton) return;
+
+    if (window.innerWidth >= 768) {
+      popoverStyle = "";
+      return;
+    }
+
+    const triggerRect = triggerButton.getBoundingClientRect();
+    const sidePadding = 12;
+    const verticalGap = 8;
+    const mobileBottomOffset = 88;
+    const width = Math.min(360, window.innerWidth - sidePadding * 2);
+
+    let left = align === "right"
+      ? triggerRect.right - width
+      : triggerRect.left;
+
+    left = Math.max(sidePadding, Math.min(left, window.innerWidth - sidePadding - width));
+
+    const top = triggerRect.bottom + verticalGap;
+    const maxHeight = Math.max(220, window.innerHeight - top - mobileBottomOffset);
+
+    popoverStyle = `top:${Math.round(top)}px;left:${Math.round(left)}px;width:${Math.round(width)}px;max-height:${Math.round(maxHeight)}px;`;
+  }
+
   // [NEW] Fungsi buka popover sekaligus sinkronisasi state
   function openPopover() {
     isOpen = !isOpen;
@@ -179,8 +209,26 @@
       pendingStart = startDate;
       pendingEnd = endDate;
       pendingPreset = appliedPreset;
+
+      updatePopoverPosition();
+      requestAnimationFrame(updatePopoverPosition);
+    } else {
+      popoverStyle = "";
     }
   }
+
+  $effect(() => {
+    if (!isOpen) return;
+
+    const handleViewportChange = () => updatePopoverPosition();
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+
+    return () => {
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
+    };
+  });
 
   function clickOutside(node: HTMLElement) {
     const handleClick = (e: MouseEvent) => { if (!node.contains(e.target as Node)) isOpen = false; };
@@ -199,6 +247,7 @@
 
   <button 
     type="button" 
+    bind:this={triggerButton}
     onclick={openPopover}
     class="flex items-center gap-2 px-4 py-2 bg-white border border-(--color-border) rounded-lg text-sm font-medium text-(--color-text-secondary) hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-(--color-primary-soft) transition-colors h-10"
   >
@@ -219,59 +268,62 @@
   </button>
 
   {#if isOpen}
-    <div transition:fade={{ duration: 150 }} class="absolute left-0 top-12 mt-1 z-50 flex bg-white border border-(--color-border) rounded-xl shadow-xl overflow-hidden w-max">
-      
+    <div 
+      transition:fade={{ duration: 150 }}
+      class={`fixed z-60 overflow-y-auto bg-white border border-(--color-border) rounded-xl shadow-xl flex flex-col
+        md:absolute md:inset-x-auto md:bottom-auto md:top-[calc(100%+8px)] md:max-h-none md:overflow-visible md:flex-row
+        ${align === 'right' ? 'md:right-0' : 'md:left-0'} 
+      `}
+      style={popoverStyle}
+    >  
       {#if granularity === 'day'}
-        <div class="w-36 border-r border-gray-100 p-2 flex flex-col gap-1 bg-gray-50/50">
-           <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 pt-1 mb-1">Harian</p>
-           <button onclick={() => applyPreset('today')} class="text-left px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-md transition-colors">Hari Ini</button>
-           <button onclick={() => applyPreset('yesterday')} class="text-left px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-md transition-colors">Kemarin</button>
-           <button onclick={() => applyPreset('last7')} class="text-left px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-md transition-colors">7 Hari Terakhir</button>
-           <button onclick={() => applyPreset('last30')} class="text-left px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-md transition-colors">30 Hari Terakhir</button>
-           
-           {#if !enabledGranularities.includes('month')}
-             <div class="h-px bg-gray-200 my-1"></div>
-             <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 pt-1 mb-1">Bulanan</p>
-             <button onclick={() => applyPreset('thisMonth')} class="text-left px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-md transition-colors">Bulan Ini</button>
-             <button onclick={() => applyPreset('lastMonth')} class="text-left px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-md transition-colors">Bulan Lalu</button>
-           {/if}
+        <div class="order-2 md:order-1 w-full md:w-36 border-t border-gray-100 md:border-t-0 md:border-r p-2 md:pt-4 bg-gray-50/50">
+          <div class="grid grid-cols-2 gap-1 md:flex md:flex-col">
+            <button onclick={() => applyPreset('today')} class="text-left px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-md transition-colors">Hari Ini</button>
+            <button onclick={() => applyPreset('yesterday')} class="text-left px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-md transition-colors">Kemarin</button>
+            <button onclick={() => applyPreset('last7')} class="text-left px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-md transition-colors">7 Hari Terakhir</button>
+            <button onclick={() => applyPreset('last30')} class="text-left px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-md transition-colors">30 Hari Terakhir</button>
+            
+            {#if !enabledGranularities.includes('month')}
+              <button onclick={() => applyPreset('thisMonth')} class="text-left px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-md transition-colors">Bulan Ini</button>
+              <button onclick={() => applyPreset('lastMonth')} class="text-left px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-md transition-colors">Bulan Lalu</button>
+            {/if}
 
-           {#if !enabledGranularities.includes('year')}
-             <div class="h-px bg-gray-200 my-1"></div>
-             <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 pt-1 mb-1">Tahunan</p>
-             <button onclick={() => applyPreset('thisYear')} class="text-left px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-md transition-colors">Tahun Ini</button>
-             <button onclick={() => applyPreset('lastYear')} class="text-left px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-md transition-colors">Tahun Lalu</button>
-           {/if}
+            {#if !enabledGranularities.includes('year')}
+              <button onclick={() => applyPreset('thisYear')} class="text-left px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-md transition-colors">Tahun Ini</button>
+              <button onclick={() => applyPreset('lastYear')} class="text-left px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-md transition-colors">Tahun Lalu</button>
+            {/if}
+          </div>
         </div>
 
-        <div class="p-4 flex-1 w-72">
+        <div class="order-1 md:order-2 p-4 flex-1 w-full md:w-72">
           <div class="flex items-center justify-between mb-4">
             <button onclick={() => viewDate = new Date(viewYear, viewMonth - 1, 1)} class="p-1.5 rounded-md hover:bg-gray-100"><ChevronLeft size={18} /></button>
             <span class="text-sm font-bold text-(--color-text-primary)">{monthNames[viewMonth]} {viewYear}</span>
             <button onclick={() => viewDate = new Date(viewYear, viewMonth + 1, 1)} class="p-1.5 rounded-md hover:bg-gray-100"><ChevronRight size={18} /></button>
           </div>
           <div class="grid grid-cols-7 mb-2">
-            {#each dayNames as day} <div class="text-center text-[11px] font-semibold text-gray-400">{day}</div> {/each}
+            {#each dayNames as day (day)} <div class="text-center text-[11px] font-semibold text-gray-400">{day}</div> {/each}
           </div>
           <div class="grid grid-cols-7 gap-y-1">
-            {#each calendarDays as day}
+            {#each calendarDays as day (day.date)}
               {@const isStart = day.date === pendingStart} {@const isEnd = day.date === pendingEnd}
               {@const inRange = pendingStart && pendingEnd && day.date > pendingStart && day.date < pendingEnd}
               <button onclick={() => selectDate(day.date)} class={`h-8 w-8 mx-auto flex items-center justify-center text-xs transition-all relative ${day.outside ? 'text-gray-300' : 'text-gray-700'} ${!isStart && !isEnd && !inRange ? 'rounded-full hover:bg-(--color-primary-soft) hover:text-(--color-primary)' : ''} ${inRange ? 'bg-(--color-primary-soft) text-(--color-primary) w-full rounded-none' : ''} ${isStart && pendingEnd ? 'bg-(--color-primary) text-white rounded-l-full rounded-r-none w-full hover:bg-(--color-primary-hover)' : ''} ${isStart && !pendingEnd ? 'bg-(--color-primary) text-white rounded-full shadow-sm hover:bg-(--color-primary-hover)' : ''} ${isEnd ? 'bg-(--color-primary) text-white rounded-r-full rounded-l-none w-full shadow-sm hover:bg-(--color-primary-hover)' : ''}`}>{day.day}</button>
             {/each}
           </div>
-          <div class="mt-4 flex justify-end gap-2 border-t border-gray-100 pt-3"><Button variant="primary" size="sm" onclick={applySelection} disabled={!pendingStart}>Terapkan</Button></div>
+          <div class="mt-4 flex justify-end gap-2 "><Button variant="primary" size="sm" onclick={applySelection} disabled={!pendingStart}>Terapkan</Button></div>
         </div>
 
       {:else if granularity === 'month'}
-        <div class="p-4 w-72">
+        <div class="p-4 w-full md:w-72">
           <div class="flex items-center justify-between mb-4">
             <button onclick={() => monthPickerYear--} class="p-1.5 rounded-md hover:bg-gray-100"><ChevronLeft size={18} /></button>
             <span class="text-sm font-bold">{monthPickerYear}</span>
             <button onclick={() => monthPickerYear++} class="p-1.5 rounded-md hover:bg-gray-100"><ChevronRight size={18} /></button>
           </div>
           <div class="grid grid-cols-3 gap-2">
-            {#each monthNames as mName, i}
+            {#each monthNames as mName, i (mName)}
               {@const mVal = fmtMonth(monthPickerYear, i)}
               {@const isStart = mVal === pendingMonthStart} {@const isEnd = mVal === pendingMonthEnd}
               {@const inRange = pendingMonthStart && pendingMonthEnd && mVal > pendingMonthStart && mVal < pendingMonthEnd}
@@ -282,14 +334,14 @@
         </div>
 
       {:else if granularity === 'year'}
-        <div class="p-4 w-72">
+        <div class="p-4 w-full md:w-72">
           <div class="flex items-center justify-between mb-4">
             <button onclick={() => yearPickerBase -= 12} class="p-1.5 rounded-md hover:bg-gray-100"><ChevronLeft size={18} /></button>
             <span class="text-sm font-bold">{yearPickerBase} - {yearPickerBase + 11}</span>
             <button onclick={() => yearPickerBase += 12} class="p-1.5 rounded-md hover:bg-gray-100"><ChevronRight size={18} /></button>
           </div>
           <div class="grid grid-cols-3 gap-2">
-            {#each yearList as yVal}
+            {#each yearList as yVal (yVal)}
               {@const yStr = String(yVal)}
               {@const isStart = yStr === pendingYearStart} {@const isEnd = yStr === pendingYearEnd}
               {@const inRange = pendingYearStart && pendingYearEnd && yStr > pendingYearStart && yStr < pendingYearEnd}
