@@ -16,6 +16,8 @@
     class?: string;
     error?: string;
     disabled?: boolean;
+    maxItems?: number;
+    emptyMessage?: string;
   }
 
   let {
@@ -26,7 +28,9 @@
     searchPlaceholder = "Cari...",
     class: className = "",
     error = "",
-    disabled = false
+    disabled = false,
+    maxItems = 50,
+    emptyMessage = "Data tidak ditemukan.",
   }: MultiSelectProps = $props();
 
   let isOpen = $state(false);
@@ -38,7 +42,9 @@
 
   // Derivasi data untuk daftar pilihan dan daftar yang terpilih
   let filteredOptions = $derived(
-    options.filter(opt => opt.label.toLowerCase().includes(searchQuery.toLowerCase()))
+    options
+      .filter(opt => opt.label.toLowerCase().includes(searchQuery.toLowerCase()))
+      .slice(0, maxItems) 
   );
 
   let selectedOptions = $derived(
@@ -203,8 +209,7 @@
         <div class="min-h-0 flex-1 overflow-y-auto p-1 custom-scrollbar">
           {#if filteredOptions.length === 0}
             <div class="px-3 py-4 text-center text-sm text-gray-500">
-              Data tidak ditemukan.
-            </div>
+              {emptyMessage} </div>
           {:else}
             {#each filteredOptions as option (option.value)}
               {@const isSelected = values.includes(option.value)}

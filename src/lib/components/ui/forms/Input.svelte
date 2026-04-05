@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Eye, EyeOff } from "lucide-svelte";
+  import { Eye, EyeOff, X } from "lucide-svelte";
   import type { HTMLInputAttributes } from "svelte/elements";
 
   interface InputProps extends HTMLInputAttributes {
@@ -16,6 +16,7 @@
     inputClass?: string;
     hideSpinButtons?: boolean;
     id?: string;
+    clearable?: boolean;
   }
 
   let {
@@ -30,6 +31,7 @@
     iconLeft = null,
     iconRight = null,
     hideSpinButtons = false,
+    clearable = false,
 
     class: wrapperClass = "",
     inputClass = "",
@@ -43,6 +45,10 @@
   const inputType = $derived(
     isPassword ? (showPassword ? "text" : "password") : type,
   );
+
+  function handleClear() {
+    value = "";
+  }
 </script>
 
 <div class={`flex flex-col gap-1.5 w-full ${wrapperClass}`}>
@@ -72,11 +78,11 @@
         border-(--color-border) text-(--color-text-primary)
         focus:border-(--color-primary) focus:ring-2 focus:ring-(--color-primary-soft)
         ${iconLeft ? "pl-9" : ""}
-        ${iconRight || isPassword ? "pr-9" : ""}
+        /* Beri padding kanan jika ada iconRight, password toggle, ATAU tombol clear */
+        ${iconRight || isPassword || (clearable && value) ? "pr-9" : ""}
         ${error ? "border-(--color-danger)" : ""}
         ${disabled ? "opacity-50 cursor-not-allowed bg-gray-50" : ""}
         
-        /* Logika untuk menyembunyikan Spin Buttons */
         ${type === "number" && hideSpinButtons ? "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" : ""}
         
         ${inputClass}
@@ -84,7 +90,16 @@
       {...rest}
     />
 
-    {#if iconRight && !isPassword}
+    {#if clearable && value && !disabled}
+      <button
+        type="button"
+        onclick={handleClear}
+        class="absolute right-3 top-1/2 -translate-y-1/2 text-(--color-text-muted) hover:text-red-500 p-0.5 hover:bg-gray-100 rounded-md transition-colors focus:outline-none"
+      >
+        <X size={16} strokeWidth={2.5} />
+      </button>
+
+    {:else if iconRight && !isPassword}
       {@const Icon = iconRight}
       <Icon
         size={18}

@@ -15,6 +15,7 @@
     placeholder?: string;
     disabled?: boolean;
     searchable?: boolean;
+    maxItems?: number;
     class?: string;
     id?: string;
   }
@@ -29,6 +30,7 @@
     placeholder = "Pilih salah satu...",
     disabled = false,
     searchable = false,
+    maxItems = 50,
     class: wrapperClass = "",
   }: SelectProps = $props();
 
@@ -40,11 +42,12 @@
   let dropdownStyle = $state("");
 
   const filteredOptions = $derived(
-    searchQuery.trim() === "" 
+    (searchQuery.trim() === "" 
       ? options 
       : options.filter((opt) => 
           opt.label.toLowerCase().includes(searchQuery.toLowerCase())
         )
+    ).slice(0, searchable ? maxItems : undefined) // Memotong HANYA jika searchable aktif
   );
 
   const selectedLabel = $derived(

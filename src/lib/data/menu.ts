@@ -19,16 +19,7 @@ export const appMenus = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { id: "input-donasi", label: "Input Donasi", icon: HandCoins, href: "/input-donasi", main:true },
   { id: "transaksi", label: "Transaksi", icon: Receipt, href: "/transaksi" },
-  { 
-    id: "donatur", 
-    label: "Donatur", 
-    icon: Users,
-    children: [
-      { id: "data-donatur", label: "Data Donatur", href: "/donatur/data" },
-      { id: "tambah-donatur", label: "Tambah Donatur", href: "/donatur/tambah" },
-      { id: "segmen-donatur", label: "Segmen & Grup", href: "/donatur/segmen" }
-    ]
-  },
+  { id: "donatur", label: "Donatur", icon: Users, href: "/donatur" },
   { 
     id: "gudang", 
     label: "Gudang", 

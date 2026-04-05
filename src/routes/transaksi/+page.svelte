@@ -30,6 +30,7 @@
   import Dropdown from "$lib/components/ui/dropdown/Dropdown.svelte";
   import DropdownItem from "$lib/components/ui/dropdown/DropdownItem.svelte";
   import Modal from "$lib/components/ui/modal/Modal.svelte";
+  import Badge from "$lib/components/ui/badge/Badge.svelte";
   import { toastStore } from "$lib/stores/toast.svelte";
 
   import {
@@ -298,15 +299,18 @@ let endDate = $state(todayStr);
   }
 
   // Helper UI
-  const statusStyles: Record<string, string> = {
-    success: "bg-green-100 text-green-700 border-green-200",
-    pending: "bg-amber-100 text-amber-700 border-amber-200", // Menyesuaikan dengan Golang (pending bukan warning)
-    cancelled: "bg-red-100 text-red-700 border-red-200",
+  // [DIUBAH] Ubah menjadi map yang mengembalikan nama variant Badge
+  const getBadgeVariant = (status: string) => {
+    switch (status) {
+      case "success": return "success";
+      case "duplicate": return "warning";
+      default: return "secondary";
+    }
   };
+
   const statusLabels: Record<string, string> = {
     success: "Berhasil",
-    pending: "Pending",
-    cancelled: "Gagal",
+    duplicate: "Duplikat",
   };
 
   function formatDate(isoString: string) {
@@ -487,11 +491,13 @@ let endDate = $state(todayStr);
                     <span class="font-bold text-sm text-gray-900 leading-none"
                       >Rp {formatNumber(trx.nominal, "standard")}</span
                     >
-                    <span
-                      class={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${statusStyles[trx.status] || statusStyles.cancelled}`}
-                    >
-                      {statusLabels[trx.status] || trx.status}
-                    </span>
+                    <Badge 
+  variant={getBadgeVariant(trx.status)} 
+  size="sm" 
+  class="text-[10px] uppercase tracking-wider"
+>
+  {statusLabels[trx.status] || trx.status}
+</Badge>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -560,11 +566,7 @@ let endDate = $state(todayStr);
             date={formatDate(trx.tanggal_transaksi)}
             amount={formatNumber(trx.nominal, "standard")}
             statusLabel={statusLabels[trx.status] || trx.status}
-            statusVariant={statusStyles[trx.status]
-              ? trx.status === "pending"
-                ? "warning"
-                : trx.status
-              : "danger"}
+            statusVariant={getBadgeVariant(trx.status)}
           />
         {:else}
           <div

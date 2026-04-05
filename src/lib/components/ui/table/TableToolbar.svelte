@@ -3,7 +3,7 @@
   import Input from "$lib/components/ui/forms/Input.svelte";
   import Button from "$lib/components/ui/button/Button.svelte";
   import Modal from "$lib/components/ui/modal/Modal.svelte";
-  import { Search, Filter, Trash2 } from "lucide-svelte";
+  import { Search, Filter, Trash2, X } from "lucide-svelte"; // Tambahkan X
 
   interface TableToolbarProps {
     searchValue?: string;
@@ -57,12 +57,12 @@
 </script>
 
 <div class={className}>
-  <div class={searchWrapperClass}>
+  <div class={`relative ${searchWrapperClass}`}>
     <Input
       iconLeft={Search}
       placeholder={searchPlaceholder}
+      clearable
       bind:value={searchValue}
-      class={searchInputClass}
     />
   </div>
 

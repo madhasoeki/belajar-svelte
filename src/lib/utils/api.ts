@@ -47,6 +47,30 @@ export const apiClient = {
       console.error(`[API Error] GET ${endpoint}:`, error);
       throw error;
     }
-  }
+  },
+
+// 3. Fungsi PATCH (Untuk Update Sebagian Data)
+  async patch(endpoint: string, data: any) {
+    try {
+      const response = await fetch(`${PUBLIC_API_URL}${endpoint}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          // "Authorization": `Bearer ${token}` 
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Terjadi kesalahan: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`[API Error] PATCH ${endpoint}:`, error);
+      throw error;
+    }
+  },
 
 };
