@@ -34,8 +34,10 @@
 
   let isOpen = $state(false);
   let container: HTMLElement;
+  let triggerButton = $state<HTMLButtonElement | null>(null);
   let searchQuery = $state("");
   let searchInputEl = $state<HTMLInputElement | null>(null);
+  let dropdownStyle = $state("");
 
   const filteredOptions = $derived(
     searchQuery.trim() === "" 
@@ -54,6 +56,7 @@
       isOpen = !isOpen;
       if (isOpen) {
         searchQuery = "";
+        updateDropdownPosition();
       }
     }
   }
@@ -69,10 +72,54 @@
     }
   }
 
+  function updateDropdownPosition() {
+    if (!isOpen || !triggerButton) return;
+
+    const rect = triggerButton.getBoundingClientRect();
+    const gap = 6;
+    const viewportPadding = 8;
+    const preferredHeight = searchable ? 320 : 260;
+
+    const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+    const spaceAbove = rect.top - viewportPadding;
+    const openUpward =
+      spaceBelow < Math.min(220, preferredHeight) && spaceAbove > spaceBelow;
+
+    const availableSpace = openUpward ? spaceAbove : spaceBelow;
+    const maxHeight = Math.max(
+      140,
+      Math.min(preferredHeight, availableSpace - gap),
+    );
+
+    const width = rect.width;
+    const left = Math.max(
+      viewportPadding,
+      Math.min(rect.left, window.innerWidth - viewportPadding - width),
+    );
+    const top = openUpward ? rect.top - gap : rect.bottom + gap;
+
+    dropdownStyle = `position:fixed;left:${Math.round(left)}px;top:${Math.round(top)}px;width:${Math.round(width)}px;max-height:${Math.round(maxHeight)}px;${openUpward ? "transform:translateY(-100%);" : ""}`;
+  }
+
   $effect(() => {
     if (isOpen && searchInputEl) {
-      setTimeout(() => searchInputEl?.focus(), 10);
+      requestAnimationFrame(() => searchInputEl?.focus());
     }
+  });
+
+  $effect(() => {
+    if (!isOpen) return;
+
+    const syncPosition = () => updateDropdownPosition();
+    requestAnimationFrame(syncPosition);
+
+    window.addEventListener("resize", syncPosition);
+    window.addEventListener("scroll", syncPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", syncPosition);
+      window.removeEventListener("scroll", syncPosition, true);
+    };
   });
 </script>
 
@@ -89,6 +136,7 @@
     <button
       {id}
       type="button"
+      bind:this={triggerButton}
       onclick={toggleOpen}
       {disabled}
       class={`
@@ -108,7 +156,10 @@
     </button>
 
     {#if isOpen}
-      <div class="absolute z-50 w-full mt-1 bg-white border border-(--color-border) rounded-lg shadow-lg overflow-hidden flex flex-col">
+      <div
+        class="z-1200 bg-white border border-(--color-border) rounded-lg shadow-lg overflow-hidden flex flex-col"
+        style={dropdownStyle}
+      >
         
         {#if searchable}
           <div class="flex items-center gap-2 px-3 py-2 border-b border-(--color-border) bg-gray-50/50 sticky top-0">
@@ -124,7 +175,7 @@
           </div>
         {/if}
 
-        <ul class="max-h-60 overflow-y-auto p-1">
+        <ul class="min-h-0 flex-1 overflow-y-auto p-1">
           {#each filteredOptions as option (option.value)}
             <button
               type="button"

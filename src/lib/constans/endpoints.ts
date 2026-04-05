@@ -4,5 +4,11 @@ export const API_ENDPOINTS = {
   },
   DONATUR: {
     SEARCH: "/donatur/search",
+    LIST: "/donatur",
+    EXPORT: "/donatur/export",
+  },
+  TRANSAKSI: {
+    LIST: "/transaksi",
+    EXPORT: "/transaksi/export",
   },
 } as const;

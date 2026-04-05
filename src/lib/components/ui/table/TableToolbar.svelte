@@ -10,12 +10,20 @@
     searchPlaceholder?: string;
     selectedCount?: number;
     showFilter?: boolean;
+    class?: string;
+    searchWrapperClass?: string;
+    searchInputClass?: string;
+    actionsClass?: string;
+    filterButtonClass?: string;
+    filterLabelClass?: string;
+    filterActive?: boolean;
     // Snippets untuk komposisi dinamis
     filterContent?: Snippet;
     bulkActions?: Snippet;
     extraActions?: Snippet;
     // Handler bawaan
     onDeleteSelected?: () => void;
+    onResetFilter?: () => void;
     onApplyFilter?: () => void;
   }
 
@@ -24,10 +32,18 @@
     searchPlaceholder = "Cari data...",
     selectedCount = 0,
     showFilter = true,
+    class: className = "flex flex-col sm:flex-row items-center justify-between gap-4",
+    searchWrapperClass = "w-full sm:w-72",
+    searchInputClass = "",
+    actionsClass = "flex items-center gap-2 w-full sm:w-auto",
+    filterButtonClass = "",
+    filterLabelClass = "",
+    filterActive = false,
     filterContent,
     bulkActions,
     extraActions,
     onDeleteSelected,
+    onResetFilter,
     onApplyFilter
   }: TableToolbarProps = $props();
 
@@ -40,16 +56,17 @@
   }
 </script>
 
-<div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-  <div class="w-full sm:w-72">
+<div class={className}>
+  <div class={searchWrapperClass}>
     <Input
       iconLeft={Search}
       placeholder={searchPlaceholder}
       bind:value={searchValue}
+      class={searchInputClass}
     />
   </div>
 
-  <div class="flex items-center gap-2 w-full sm:w-auto">
+  <div class={actionsClass}>
     
     {#if selectedCount > 0}
       {#if bulkActions}
@@ -70,9 +87,20 @@
       <Button 
         variant="outline" 
         icon={Filter} 
+        class={`relative ${filterButtonClass}`}
         onclick={() => (isFilterModalOpen = true)}
       >
-        Filter
+        <span class={filterLabelClass}>Filter</span>
+        {#if filterActive}
+          <span class="absolute top-0 right-0 -mt-1 -mr-1 flex h-3 w-3">
+            <span
+              class="animate-ping absolute inline-flex h-full w-full rounded-full bg-(--color-primary) opacity-75"
+            ></span>
+            <span
+              class="relative inline-flex rounded-full h-3 w-3 bg-(--color-primary)"
+            ></span>
+          </span>
+        {/if}
       </Button>
     {/if}
 
@@ -94,9 +122,11 @@
     </div>
 
     {#snippet footer()}
-      <Button variant="ghost" class="w-full sm:w-auto" onclick={() => (isFilterModalOpen = false)}>
-        Batal
-      </Button>
+      {#if onResetFilter}
+        <Button variant="outline" class="w-full sm:w-auto" onclick={onResetFilter}>
+          Reset
+        </Button>
+      {/if}
       <Button variant="primary" class="w-full sm:w-auto" onclick={handleApplyFilter}>
         Terapkan Filter
       </Button>

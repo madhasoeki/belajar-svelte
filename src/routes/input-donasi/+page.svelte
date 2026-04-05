@@ -14,6 +14,7 @@
   import { User, Phone, Wallet, FileText, CheckCircle2 } from "lucide-svelte";
   import { formatNumber } from "$lib/utils/formatter";
   import { apiClient } from "$lib/utils/api";
+
   import { API_ENDPOINTS } from "$lib/constans/endpoints";
 
   // --- STATE FORMULIR ---
@@ -24,9 +25,13 @@
   let selectedRekening = $state("");
   let selectedSumber = $state("");
   let rawAmount = $state<number | null>(null);
-  let donationDate = $state(new Date().toISOString().split("T")[0]);
   let donaturId = $state("");
   let lastSelectedPhone = $state("");
+
+  import { getLocalDateString } from "$lib/utils/date";
+
+  let todayLocal = getLocalDateString();
+  let donationDate = $state(todayLocal);
 
   $effect(() => {
     if (donorPhone !== lastSelectedPhone) {
@@ -40,12 +45,14 @@
     { label: "Wakaf Sumur", value: "Wakaf Sumur" },
     { label: "Pembangunan Masjid", value: "Pembangunan Masjid" },
     { label: "Beasiswa Tahfidz", value: "Beasiswa Tahfidz" },
+    { label: "Indonesia Cetak Huffadz", value: "Indonesia Cetak Huffadz" },
     { label: "Zakat Fitrah", value: "Zakat Fitrah" },
     { label: "Infaq Umum", value: "Infaq Umum" },
   ];
 
   const rekenings = [
     { label: "BCA - 1234567890", value: "BCA - 1234567890" },
+    { label: "BSI - 7123456789", value: "BSI - 7123456789" },
     { label: "BNI - 0987654321", value: "BNI - 0987654321" },
     { label: "MANDIRI - 1122334455", value: "MANDIRI - 1122334455" },
   ];
@@ -82,23 +89,44 @@
     rawAmount = val;
   }
 
-  // [BARU] Fungsi untuk menangani data yang dipilih dari Autocomplete
   function handleSelectDonatur(donatur: {
     id: string;
-    nama: string;
     sapaan: string;
-    phone: string;
+    nama_donatur: string; 
+    nomor_hp_donatur: string;
+    transaksi?: Array<{
+      tanggal_transaksi: string;
+      program: string;
+      rekening: string;
+      nominal: number;
+    }>;
   }) {
     donaturId = donatur.id;
-    lastSelectedPhone = donatur.phone; // Kunci nomor hp untuk perbandingan $effect di atas
+    // Gunakan fallback jaga-jaga kalau mapping dari komponennya beda
+    lastSelectedPhone = donatur.nomor_hp_donatur; 
 
-    donorName = donatur.nama;
+    donorName = donatur.nama_donatur;
     donorGreeting = donatur.sapaan || "Kak";
 
-    toastStore.info(
-      `Data ${donorGreeting} ${donorName} otomatis diisi.`,
-      "Donatur Ditemukan",
-    );
+    let toastMessage = `Data ${donorGreeting} ${donorName} otomatis diisi.`;
+
+    // [BARU] Logika Autofill Transaksi Terakhir
+    if (donatur.transaksi && donatur.transaksi.length > 0) {
+      const lastTrx = donatur.transaksi[0]; // Mengambil data pertama dari array
+
+      selectedProgram = lastTrx.program;
+      selectedRekening = lastTrx.rekening;
+      rawAmount = lastTrx.nominal;
+
+      toastMessage = `Data donatur dan riwayat donasi terakhir berhasil dimuat.`;
+    } else {
+      // Jika tidak ada riwayat, reset field transaksi
+      selectedProgram = "";
+      selectedRekening = "";
+      rawAmount = null;
+    }
+
+    toastStore.info(toastMessage, "Donatur Ditemukan");
   }
 
   async function handleSubmit(e: Event) {
@@ -208,7 +236,11 @@
           class="pb-2 border-b border-gray-50"
         />
         <CardContent class="pt-4 flex flex-col gap-5">
-          <DatePicker label="Tanggal Transaksi *" bind:value={donationDate} />
+          <DatePicker
+            label="Tanggal Transaksi *"
+            bind:value={donationDate}
+            maxDate={todayLocal}
+          />
 
           <Select
             label="Program Tujuan *"

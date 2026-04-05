@@ -45,10 +45,52 @@
   let appliedPreset = $state("");
 
   let prevGranularity = $state(granularity);
+  
   $effect(() => {
     if (granularity !== prevGranularity) {
       isOpen = false;
       appliedPreset = ""; // Reset label preset jika pindah mode
+      
+      // --- LOGIKA TRANSFORMASI RENTANG OTOMATIS ---
+      if (startDate) {
+        // Ambil tahun dan bulan dari startDate yang sedang aktif
+        const d = new Date(startDate);
+        const y = d.getFullYear();
+        const m = d.getMonth();
+
+        if (granularity === 'month') {
+          // Perluas jadi full satu bulan
+          const lastDay = new Date(y, m + 1, 0).getDate();
+          startDate = fmt(y, m, 1);
+          endDate = fmt(y, m, lastDay);
+          
+          // Sinkronisasi state di dalam kalender
+          pendingMonthStart = fmtMonth(y, m);
+          pendingMonthEnd = fmtMonth(y, m);
+        } 
+        else if (granularity === 'year') {
+          // Perluas jadi full satu tahun
+          startDate = `${y}-01-01`;
+          endDate = `${y}-12-31`;
+          
+          // Sinkronisasi state di dalam kalender
+          pendingYearStart = String(y);
+          pendingYearEnd = String(y);
+        } 
+        else if (granularity === 'day') {
+          // Kembalikan ke "Hari Ini" (menggunakan waktu lokal perangkat)
+          const now = new Date();
+          const todayLocal = fmt(now.getFullYear(), now.getMonth(), now.getDate());
+          
+          startDate = todayLocal;
+          endDate = todayLocal;
+          
+          // Sinkronisasi state di dalam kalender
+          pendingStart = todayLocal;
+          pendingEnd = todayLocal;
+        }
+      }
+      
       prevGranularity = granularity;
     }
   });
@@ -89,12 +131,46 @@
     return `${y}-${String(m + 1).padStart(2, '0')}`;
   }
 
-  function formatDisplay(dateStr: string) {
-    if (!dateStr) return "";
-    const parts = dateStr.split("-");
-    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`; 
-    if (parts.length === 2) return `${parts[1]}-${parts[0]}`; 
-    return dateStr; 
+  // --- FUNGSI FORMAT VISUAL ---
+  function getVisualLabel() {
+    // 1. Jika ada preset (Misal: "Hari Ini", "Bulan Lalu"), langsung gunakan
+    if (appliedPreset) return presetLabels[appliedPreset];
+    
+    // 2. Pastikan start dan end terisi
+    if (!startDate || !endDate) return label;
+
+    const startParts = startDate.split("-");
+    const endParts = endDate.split("-");
+
+    const sy = startParts[0], sm = parseInt(startParts[1]) - 1, sd = startParts[2];
+    const ey = endParts[0], em = parseInt(endParts[1]) - 1, ed = endParts[2];
+
+    // -- MODE TAHUNAN (Hanya tampilkan tahun) --
+    if (granularity === "year") {
+      if (sy === ey) return sy; // Contoh: "2026"
+      return `${sy} - ${ey}`;   // Contoh: "2024 - 2026"
+    }
+
+    // -- MODE BULANAN (Tampilkan Nama Bulan + Tahun) --
+    if (granularity === "month") {
+      const startLabel = `${monthNames[sm]} ${sy}`;
+      const endLabel = `${monthNames[em]} ${ey}`;
+      
+      if (startLabel === endLabel) return startLabel; // Contoh: "Apr 2026"
+      
+      // Jika tahunnya sama, cukup panggil tahunnya di akhir (Contoh: "Jan - Apr 2026")
+      if (sy === ey) return `${monthNames[sm]} - ${monthNames[em]} ${sy}`;
+      
+      // Jika tahun berbeda (Contoh: "Des 2025 - Apr 2026")
+      return `${startLabel} - ${endLabel}`;
+    }
+
+    // -- MODE HARIAN (Tampilkan tanggal lengkap) --
+    const startStr = `${sd} ${monthNames[sm]} ${sy}`;
+    const endStr = `${ed} ${monthNames[em]} ${ey}`;
+
+    if (startDate === endDate) return startStr;
+    return `${startStr} - ${endStr}`;
   }
 
   // --- LOGIKA DAY PICKER ---
@@ -168,11 +244,30 @@
 
   // --- GLOBAL APPLY ---
   function applySelection() {
-    appliedPreset = pendingPreset; // [NEW] Kunci preset untuk ditampilkan di tombol
+    appliedPreset = pendingPreset; 
     
-    if (granularity === 'day') { startDate = pendingStart; endDate = pendingEnd || pendingStart; }
-    else if (granularity === 'month') { startDate = pendingMonthStart; endDate = pendingMonthEnd || pendingMonthStart; }
-    else if (granularity === 'year') { startDate = pendingYearStart; endDate = pendingYearEnd || pendingYearStart; }
+    if (granularity === 'day') {
+      startDate = pendingStart;
+      endDate = pendingEnd || pendingStart;
+    } 
+    else if (granularity === 'month') {
+      // Normalisasi: YYYY-MM menjadi YYYY-MM-01
+      const [y, m] = pendingMonthStart.split("-").map(Number);
+      startDate = fmt(y, m - 1, 1); // Awal bulan
+
+      const endVal = pendingMonthEnd || pendingMonthStart;
+      const [ey, em] = endVal.split("-").map(Number);
+      const lastDay = new Date(ey, em, 0).getDate(); // Ambil tanggal terakhir bulan tsb
+      endDate = fmt(ey, em - 1, lastDay);
+    } 
+    else if (granularity === 'year') {
+      // Normalisasi: YYYY menjadi YYYY-01-01
+      startDate = `${pendingYearStart}-01-01`;
+      
+      const endVal = pendingYearEnd || pendingYearStart;
+      endDate = `${endVal}-12-31`;
+    }
+    
     isOpen = false;
   }
 
@@ -202,18 +297,24 @@
     popoverStyle = `top:${Math.round(top)}px;left:${Math.round(left)}px;width:${Math.round(width)}px;max-height:${Math.round(maxHeight)}px;`;
   }
 
-  // [NEW] Fungsi buka popover sekaligus sinkronisasi state
   function openPopover() {
     isOpen = !isOpen;
     if (isOpen) {
-      pendingStart = startDate;
-      pendingEnd = endDate;
+      if (granularity === 'day') {
+        pendingStart = startDate;
+        pendingEnd = endDate;
+      } else if (granularity === 'month' && startDate) {
+        // Ambil YYYY-MM dari YYYY-MM-DD
+        pendingMonthStart = startDate.substring(0, 7);
+        pendingMonthEnd = endDate.substring(0, 7);
+      } else if (granularity === 'year' && startDate) {
+        // Ambil YYYY dari YYYY-MM-DD
+        pendingYearStart = startDate.substring(0, 4);
+        pendingYearEnd = endDate.substring(0, 4);
+      }
+      
       pendingPreset = appliedPreset;
-
       updatePopoverPosition();
-      requestAnimationFrame(updatePopoverPosition);
-    } else {
-      popoverStyle = "";
     }
   }
 
@@ -253,17 +354,7 @@
   >
     <CalendarIcon size={18} class="text-gray-400" />
     <span>
-      {#if appliedPreset}
-        {presetLabels[appliedPreset]}
-      {:else if startDate && endDate}
-        {#if startDate === endDate}
-          {formatDisplay(startDate)}
-        {:else}
-          {formatDisplay(startDate)} <span class="mx-1 text-gray-300">-</span> {formatDisplay(endDate)}
-        {/if}
-      {:else}
-        {label}
-      {/if}
+      {getVisualLabel()}
     </span>
   </button>
 

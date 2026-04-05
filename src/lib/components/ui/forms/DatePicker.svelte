@@ -10,6 +10,7 @@
     disabled?: boolean;
     error?: string;
     helper?: string;
+    maxDate?: string;
   }
 
   let {
@@ -19,6 +20,7 @@
     disabled = false,
     error = "",
     helper = "",
+    maxDate = "",
     class: className = ""
   }: DatePickerProps = $props();
 
@@ -168,13 +170,19 @@
           <div class="grid grid-cols-7 gap-y-1">
             {#each calendarDays as day (day.date)}
               {@const isSelected = day.date === pendingDate}
+              {@const isDisabledDate = maxDate ? day.date > maxDate : false} 
+              
               <button 
                 type="button"
-                onclick={() => selectDate(day.date)} 
+                disabled={isDisabledDate}
+                onclick={() => !isDisabledDate && selectDate(day.date)} 
                 class={`
-                  h-8 w-8 mx-auto flex items-center justify-center text-xs transition-all rounded-full cursor-pointer
-                  ${day.outside ? 'text-gray-300' : 'text-gray-700'} 
-                  ${isSelected ? 'bg-(--color-primary) text-white font-bold shadow-sm' : 'hover:bg-(--color-primary-soft) hover:text-(--color-primary)'}
+                  h-8 w-8 mx-auto flex items-center justify-center text-xs transition-all rounded-full
+                  ${isDisabledDate ? 'text-gray-300 cursor-not-allowed opacity-50' : 'cursor-pointer'}
+                  ${!isDisabledDate && day.outside ? 'text-gray-300' : ''}
+                  ${!isDisabledDate && !day.outside ? 'text-gray-700' : ''}
+                  ${isSelected && !isDisabledDate ? 'bg-(--color-primary) text-white font-bold shadow-sm' : ''}
+                  ${!isSelected && !isDisabledDate ? 'hover:bg-(--color-primary-soft) hover:text-(--color-primary)' : ''}
                 `}
               >
                 {day.day}

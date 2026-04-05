@@ -39,10 +39,42 @@
   } from "lucide-svelte";
 
   const users = [
-    { id: "TRX-001", name: "Eleana", phone: "0812-3456-7890", email: "eleana@mail.com", status: "success", amount: "Rp 1.500.000", date: "03 Apr 2026" },
-    { id: "TRX-002", name: "Ahmad Fauzi", phone: "0856-1122-3344", email: "fauzi.gudang@mail.com", status: "warning", amount: "Rp 250.000", date: "02 Apr 2026" },
-    { id: "TRX-003", name: "Samsul Arif", phone: "0811-9988-7766", email: "samsul.relawan@mail.com", status: "danger", amount: "Rp 100.000", date: "01 Apr 2026" },
-    { id: "TRX-004", name: "Dewi Lestari", phone: "0822-5555-4444", email: "dewi.l@mail.com", status: "success", amount: "Rp 500.000", date: "31 Mar 2026" },
+    {
+      id: "TRX-001",
+      name: "Eleana",
+      phone: "0812-3456-7890",
+      email: "eleana@mail.com",
+      status: "success",
+      amount: "Rp 1.500.000",
+      date: "03 Apr 2026",
+    },
+    {
+      id: "TRX-002",
+      name: "Ahmad Fauzi",
+      phone: "0856-1122-3344",
+      email: "fauzi.gudang@mail.com",
+      status: "warning",
+      amount: "Rp 250.000",
+      date: "02 Apr 2026",
+    },
+    {
+      id: "TRX-003",
+      name: "Samsul Arif",
+      phone: "0811-9988-7766",
+      email: "samsul.relawan@mail.com",
+      status: "danger",
+      amount: "Rp 100.000",
+      date: "01 Apr 2026",
+    },
+    {
+      id: "TRX-004",
+      name: "Dewi Lestari",
+      phone: "0822-5555-4444",
+      email: "dewi.l@mail.com",
+      status: "success",
+      amount: "Rp 500.000",
+      date: "31 Mar 2026",
+    },
   ];
 
   // State Management untuk Bulk Actions & Modal
@@ -130,10 +162,10 @@
       >
     </CardHeader>
     <CardContent class="space-y-4">
-      <TableToolbar 
-        bind:searchValue 
+      <TableToolbar
+        bind:searchValue
         selectedCount={selectedRows.length}
-        onDeleteSelected={() => confirmDelete(selectedRows[0])} 
+        onDeleteSelected={() => confirmDelete(selectedRows[0])}
       >
         {#snippet extraActions()}
           <Button variant="primary" icon={Download}>Ekspor</Button>
@@ -142,11 +174,18 @@
         {#snippet filterContent()}
           <div class="space-y-4">
             <div>
-              <div class="text-sm font-medium text-gray-700 block mb-1">Status Transaksi</div>
+              <div class="text-sm font-medium text-gray-700 block mb-1">
+                Status Transaksi
+              </div>
               <div class="flex gap-2">
-                <Button variant="outline" size="sm" class="flex-1">Semua</Button>
-                <Button variant="primary" size="sm" class="flex-1">Berhasil</Button>
-                <Button variant="outline" size="sm" class="flex-1">Pending</Button>
+                <Button variant="outline" size="sm" class="flex-1">Semua</Button
+                >
+                <Button variant="primary" size="sm" class="flex-1"
+                  >Berhasil</Button
+                >
+                <Button variant="outline" size="sm" class="flex-1"
+                  >Pending</Button
+                >
               </div>
             </div>
             <div>
@@ -177,8 +216,11 @@
 
         <TableBody>
           {#each users as user}
-            <TableRow data-state={selectedRows.includes(user.id) ? "selected" : undefined}>
-              
+            <TableRow
+              data-state={selectedRows.includes(user.id)
+                ? "selected"
+                : undefined}
+            >
               <TableCell class="text-center">
                 <input
                   type="checkbox"
@@ -190,16 +232,28 @@
 
               <TableCell>
                 <div class="flex flex-col gap-1">
-                  <span class="font-bold text-sm text-gray-900 leading-none">{user.id}</span>
-                  <span class="text-xs text-gray-500 font-medium">{user.date}</span>
+                  <span class="font-bold text-sm text-gray-900 leading-none"
+                    >{user.id}</span
+                  >
+                  <span class="text-xs text-gray-500 font-medium"
+                    >{user.date}</span
+                  >
                 </div>
               </TableCell>
 
               <TableCell>
                 <div class="flex items-start gap-3">
-                  <Avatar name={user.name} size="sm" shape="circle" class="mt-0.5" />
+                  <Avatar
+                    name={user.name}
+                    size="sm"
+                    shape="circle"
+                    class="mt-0.5"
+                  />
                   <div class="flex flex-col gap-0.5">
-                    <span class="font-semibold text-sm leading-none text-gray-900">{user.name}</span>
+                    <span
+                      class="font-semibold text-sm leading-none text-gray-900"
+                      >{user.name}</span
+                    >
                     <span class="text-xs text-gray-600">{user.phone}</span>
                     <span class="text-xs text-gray-400">{user.email}</span>
                   </div>
@@ -208,8 +262,12 @@
 
               <TableCell>
                 <div class="flex flex-col items-start gap-1.5">
-                  <span class="font-bold text-sm text-gray-900 leading-none">{user.amount}</span>
-                  <span class={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${statusStyles[user.status]}`}>
+                  <span class="font-bold text-sm text-gray-900 leading-none"
+                    >{user.amount}</span
+                  >
+                  <span
+                    class={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${statusStyles[user.status]}`}
+                  >
                     {statusLabels[user.status]}
                   </span>
                 </div>
@@ -222,10 +280,22 @@
                       <MoreHorizontal size={16} />
                     </Button>
                   {/snippet}
-                  <DropdownItem icon={Eye} onclick={() => handleAction("lihat detail", user.id)}>Detail</DropdownItem>
-                  <DropdownItem icon={Edit} onclick={() => handleAction("edit data", user.id)}>Ubah</DropdownItem>
+                  <DropdownItem
+                    icon={Eye}
+                    onclick={() => handleAction("lihat detail", user.id)}
+                    >Detail</DropdownItem
+                  >
+                  <DropdownItem
+                    icon={Edit}
+                    onclick={() => handleAction("edit data", user.id)}
+                    >Ubah</DropdownItem
+                  >
                   <div class="border-t border-(--color-border) my-1"></div>
-                  <DropdownItem icon={Trash2} variant="danger" onclick={() => confirmDelete(user.id)}>Hapus</DropdownItem>
+                  <DropdownItem
+                    icon={Trash2}
+                    variant="danger"
+                    onclick={() => confirmDelete(user.id)}>Hapus</DropdownItem
+                  >
                 </Dropdown>
               </TableCell>
             </TableRow>

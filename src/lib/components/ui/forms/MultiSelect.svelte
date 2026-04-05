@@ -32,6 +32,8 @@
   let isOpen = $state(false);
   let searchQuery = $state("");
   let inputRef = $state<HTMLInputElement | null>(null);
+  let triggerButton = $state<HTMLButtonElement | null>(null);
+  let dropdownStyle = $state("");
   let multiSelectId = `multiselect-${Math.random().toString(36).slice(2, 9)}`;
 
   // Derivasi data untuk daftar pilihan dan daftar yang terpilih
@@ -66,8 +68,38 @@
     isOpen = !isOpen;
     if (isOpen) {
       searchQuery = ""; // Reset pencarian saat dibuka
-      setTimeout(() => inputRef?.focus(), 50); // Fokus ke search bar otomatis
+      updateDropdownPosition();
+      requestAnimationFrame(() => inputRef?.focus()); // Fokus ke search bar otomatis
     }
+  }
+
+  function updateDropdownPosition() {
+    if (!isOpen || !triggerButton) return;
+
+    const rect = triggerButton.getBoundingClientRect();
+    const gap = 6;
+    const viewportPadding = 8;
+    const preferredHeight = 320;
+
+    const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+    const spaceAbove = rect.top - viewportPadding;
+    const openUpward =
+      spaceBelow < Math.min(220, preferredHeight) && spaceAbove > spaceBelow;
+
+    const availableSpace = openUpward ? spaceAbove : spaceBelow;
+    const maxHeight = Math.max(
+      140,
+      Math.min(preferredHeight, availableSpace - gap),
+    );
+
+    const width = rect.width;
+    const left = Math.max(
+      viewportPadding,
+      Math.min(rect.left, window.innerWidth - viewportPadding - width),
+    );
+    const top = openUpward ? rect.top - gap : rect.bottom + gap;
+
+    dropdownStyle = `position:fixed;left:${Math.round(left)}px;top:${Math.round(top)}px;width:${Math.round(width)}px;max-height:${Math.round(maxHeight)}px;${openUpward ? "transform:translateY(-100%);" : ""}`;
   }
 
   function clickOutside(node: HTMLElement) {
@@ -77,11 +109,26 @@
     document.addEventListener("click", handleClick, true);
     return { destroy() { document.removeEventListener("click", handleClick, true); } };
   }
+
+  $effect(() => {
+    if (!isOpen) return;
+
+    const syncPosition = () => updateDropdownPosition();
+    requestAnimationFrame(syncPosition);
+
+    window.addEventListener("resize", syncPosition);
+    window.addEventListener("scroll", syncPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", syncPosition);
+      window.removeEventListener("scroll", syncPosition, true);
+    };
+  });
 </script>
 
 <div class={`flex flex-col gap-1.5 ${className}`} use:clickOutside>
   {#if label}
-    <label for={multiSelectId} class="text-sm font-semibold text-(--color-text-primary)">
+    <label for={multiSelectId} class="text-sm font-medium text-(--color-text-secondary)">
       {label}
     </label>
   {/if}
@@ -90,6 +137,7 @@
     <button
       id={multiSelectId}
       type="button"
+      bind:this={triggerButton}
       onclick={openDropdown}
       {disabled}
       class={`w-full min-h-10.5 px-3 py-1.5 flex flex-wrap items-center gap-1.5 bg-white border text-left text-sm rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-(--color-primary-soft)
@@ -100,7 +148,7 @@
       {#if selectedOptions.length === 0}
         <span class="text-(--color-text-muted) py-1">{placeholder}</span>
       {:else}
-        {#each selectedOptions as opt}
+        {#each selectedOptions as opt (opt.value)}
           <span class="inline-flex items-center gap-1 bg-(--color-primary-soft) text-(--color-primary) px-2 py-1 rounded-md text-xs font-medium border border-(--color-primary)/20 animate-in fade-in zoom-in duration-200">
             {opt.label}
             <div 
@@ -136,7 +184,8 @@
     {#if isOpen}
       <div 
         transition:fade={{ duration: 150 }}
-        class="absolute left-0 top-[calc(100%+6px)] w-full bg-white border border-(--color-border) rounded-xl shadow-xl z-50 overflow-hidden flex flex-col"
+        class="z-1200 bg-white border border-(--color-border) rounded-xl shadow-xl overflow-hidden flex flex-col"
+        style={dropdownStyle}
       >
         <div class="p-2 border-b border-gray-100 bg-gray-50/50">
           <div class="relative">
@@ -151,13 +200,13 @@
           </div>
         </div>
 
-        <div class="max-h-60 overflow-y-auto p-1 custom-scrollbar">
+        <div class="min-h-0 flex-1 overflow-y-auto p-1 custom-scrollbar">
           {#if filteredOptions.length === 0}
             <div class="px-3 py-4 text-center text-sm text-gray-500">
               Data tidak ditemukan.
             </div>
           {:else}
-            {#each filteredOptions as option}
+            {#each filteredOptions as option (option.value)}
               {@const isSelected = values.includes(option.value)}
               <button
                 type="button"
