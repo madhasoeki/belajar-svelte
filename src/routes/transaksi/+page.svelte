@@ -1,62 +1,33 @@
 <script lang="ts">
-  import {
-    Card,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-    CardContent,
-    SimpleTableCard,
-    CardFooter,
-  } from "$lib/components/ui/card";
-
-  // Import Table Ecosystem
-  import {
-    Table,
-    TableHeader,
-    TableBody,
-    TableRow,
-    TableHead,
-    TableCell,
-    TableToolbar,
-  } from "$lib/components/ui/table";
-  import Pagination from "$lib/components/ui/pagintaion/Pagination.svelte";
+  import { Card, CardHeader, CardContent, SimpleTableCard, CardFooter, MobileOverviewCard, SummaryCard, ProgressCard } from "$lib/components/ui/card";
+  import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableToolbar } from "$lib/components/ui/table";
+  import { Select, MultiSelect, CurrencyInput, DateRangePicker } from "$lib/components/ui/forms";
+  import { Dropdown, DropdownItem } from "$lib/components/ui/dropdown";
+  import Pagination from "$lib/components/ui/pagination/Pagination.svelte";
 
   // Import UI Components lainnya
   import Button from "$lib/components/ui/button/Button.svelte";
-  import Select from "$lib/components/ui/forms/Select.svelte"; // Untuk Status tunggal
-  import MultiSelect from "$lib/components/ui/forms/MultiSelect.svelte";
-  import CurrencyInput from "$lib/components/ui/forms/CurrencyInput.svelte";
-  import DateRangePicker from "$lib/components/ui/forms/DateRangePicker.svelte";
-  import Dropdown from "$lib/components/ui/dropdown/Dropdown.svelte";
-  import DropdownItem from "$lib/components/ui/dropdown/DropdownItem.svelte";
   import Modal from "$lib/components/ui/modal/Modal.svelte";
   import Badge from "$lib/components/ui/badge/Badge.svelte";
+  import LoadingBars from "$lib/components/ui/loading/LoadingBars.svelte";
   import { toastStore } from "$lib/stores/toast.svelte";
 
-  import {
-    MoreHorizontal,
-    Edit,
-    Trash2,
-    Eye,
-    TriangleAlert,
-    Download,
-    ReceiptText,
-  } from "lucide-svelte";
+  import { Edit, Trash2, Eye, TriangleAlert, Download, ReceiptText, CircleEllipsis, Ellipsis, CircleDollarSign, CreditCard, Users, Activity } from "lucide-svelte";
 
   import { formatNumber } from "$lib/utils/formatter";
   import { apiClient } from "$lib/utils/api";
   import { API_ENDPOINTS } from "$lib/constans/endpoints";
 
   // --- STATE TANGGAL DEFAULT (HARI INI - WAKTU LOKAL) ---
-const now = new Date();
-const year = now.getFullYear(); // Mengambil tahun lokal
-const month = String(now.getMonth() + 1).padStart(2, '0'); // Mengambil bulan lokal (ditambah 1 karena index mulai dari 0)
-const day = String(now.getDate()).padStart(2, '0'); // Mengambil tanggal lokal
+  const now = new Date();
+  const year = now.getFullYear(); // Mengambil tahun lokal
+  const month = String(now.getMonth() + 1).padStart(2, "0"); // Mengambil bulan lokal (ditambah 1 karena index mulai dari 0)
+  const day = String(now.getDate()).padStart(2, "0"); // Mengambil tanggal lokal
 
-const todayStr = `${year}-${month}-${day}`;
+  const todayStr = `${year}-${month}-${day}`;
 
-let startDate = $state(todayStr);
-let endDate = $state(todayStr);
+  let startDate = $state(todayStr);
+  let endDate = $state(todayStr);
 
   // --- STATE DATA & META (DARI API) ---
   let transactions = $state<any[]>([]);
@@ -66,7 +37,7 @@ let endDate = $state(todayStr);
     total_page: 1,
     total_data: 0,
   });
-  let isLoading = $state(false);
+  let isLoading = $state(true);
 
   // --- STATE FILTER & PENCARIAN ---
   let searchValue = $state("");
@@ -80,17 +51,29 @@ let endDate = $state(todayStr);
   let nominalFrom = $state<number | null>(null);
   let nominalTo = $state<number | null>(null);
 
-  const programs = [
-    "Wakaf Sumur",
-    "Pembangunan Masjid",
-    "Infaq Umum",
-    "Indonesia Cetak Huffadz",
-  ];
-  const rekenings = [
-    "BCA - 1234567890",
-    "MANDIRI - 1122334455",
-    "BSI - 7123456789",
-  ];
+  let summary = $state({
+    total_donasi: 0,
+    total_transaksi: 0,
+    donatur_unik: 0,
+    rata_rata_donasi: 0,
+    trend_donasi: 0,
+    trend_transaksi: 0,
+    trend_donatur: 0,
+    trend_rata_rata: 0,
+  });
+
+  const trendText = $derived(
+    startDate === endDate ? "dari kemarin" : "vs periode sebelumnya"
+  );
+
+  // Helper untuk mengubah angka desimal tren menjadi teks (misal: 5.2 -> "+5.2%")
+  function formatTrend(val: number) {
+    const isPositive = val >= 0;
+    return `${isPositive ? '+' : ''}${val}%`;
+  }
+
+  const programs = ["Wakaf Sumur", "Pembangunan Masjid", "Infaq Umum", "Indonesia Cetak Huffadz"];
+  const rekenings = ["BCA - 1234567890", "MANDIRI - 1122334455", "BSI - 7123456789"];
   const statuses = [
     { label: "Semua Status", value: "" },
     { label: "Berhasil", value: "success" },
@@ -117,16 +100,12 @@ let endDate = $state(todayStr);
     { label: "Rentang", value: "between" },
   ];
 
-  const isNominalFilterActive = $derived(
-    selectedNominalOperator === "between"
-      ? nominalFrom !== null || nominalTo !== null
-      : selectedNominalOperator !== "" && nominalValue !== null,
-  );
+  const isNominalFilterActive = $derived(selectedNominalOperator === "between" ? nominalFrom !== null || nominalTo !== null : selectedNominalOperator !== "" && nominalValue !== null);
 
   // --- STATE BULK ACTIONS & DELETE ---
   let showDeleteModal = $state(false);
   let selectedItemToDelete = $state<string | null>(null);
-    let isAppending = false;
+  let isAppending = false;
 
   // --- FUNGSI API GOLANG ---
   function buildQueryParams(isExport = false) {
@@ -142,15 +121,12 @@ let endDate = $state(todayStr);
     if (endDate) params.append("end_date", endDate);
 
     // Konversi array multi-select menjadi string pisah koma (misal: "Wakaf Sumur,Infaq Umum")
-    if (selectedPrograms.length > 0)
-      params.append("program", selectedPrograms.join(","));
-    if (selectedRekenings.length > 0)
-      params.append("rekening", selectedRekenings.join(","));
+    if (selectedPrograms.length > 0) params.append("program", selectedPrograms.join(","));
+    if (selectedRekenings.length > 0) params.append("rekening", selectedRekenings.join(","));
     if (selectedStatus) params.append("status", selectedStatus);
 
     if (selectedNominalOperator === "between") {
-      if (nominalFrom !== null)
-        params.append("nominal_from", nominalFrom.toString());
+      if (nominalFrom !== null) params.append("nominal_from", nominalFrom.toString());
       if (nominalTo !== null) params.append("nominal_to", nominalTo.toString());
       if (nominalFrom !== null || nominalTo !== null) {
         params.append("nominal_operator", "between");
@@ -177,6 +153,7 @@ let endDate = $state(todayStr);
       }
 
       if (response.meta) meta = response.meta;
+      if (response.summary) summary = response.summary;
     } catch (error) {
       toastStore.error("Gagal mengambil data dari server.", "Error");
       console.error(error);
@@ -188,7 +165,7 @@ let endDate = $state(todayStr);
   function loadMore() {
     if (meta.page < meta.total_page) {
       isAppending = true; // Nyalakan penanda nambah ke bawah
-      meta.page++;        // Cukup naikkan halamannya, biarkan $effect yang bekerja
+      meta.page++; // Cukup naikkan halamannya, biarkan $effect yang bekerja
     }
   }
 
@@ -198,12 +175,7 @@ let endDate = $state(todayStr);
   }
 
   function applyModalFilter() {
-    if (
-      selectedNominalOperator === "between" &&
-      nominalFrom !== null &&
-      nominalTo !== null &&
-      nominalFrom > nominalTo
-    ) {
+    if (selectedNominalOperator === "between" && nominalFrom !== null && nominalTo !== null && nominalFrom > nominalTo) {
       [nominalFrom, nominalTo] = [nominalTo, nominalFrom];
     }
 
@@ -225,15 +197,13 @@ let endDate = $state(todayStr);
     window.location.href = `http://localhost:8080/api/transaksi/export?${qs}`;
   }
 
-  // --- LOGIKA REAKTIF (AUTO-APPLY) ---
-
   // 1. Debounce untuk Kotak Pencarian
-// --- LOGIKA REAKTIF (AUTO-APPLY) ---
+  // --- LOGIKA REAKTIF (AUTO-APPLY) ---
 
   // 1. Debounce untuk Kotak Pencarian (BIARKAN)
   let searchTimeout: ReturnType<typeof setTimeout>;
   $effect(() => {
-    const query = searchValue; 
+    const query = searchValue;
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
       handleFilterChange();
@@ -241,8 +211,8 @@ let endDate = $state(todayStr);
   });
 
   // 2. Auto-Apply saat DateRangePicker di-klik "Terapkan" (BIARKAN)
-  let prevStart = todayStr; 
-  let prevEnd = todayStr; 
+  let prevStart = todayStr;
+  let prevEnd = todayStr;
   $effect(() => {
     if (startDate !== prevStart || endDate !== prevEnd) {
       prevStart = startDate;
@@ -252,7 +222,7 @@ let endDate = $state(todayStr);
   });
 
   // 3. Auto-Fetch saat Halaman atau Limit ditekan
-  let prevPage = 1; 
+  let prevPage = 1;
   let prevLimit = 5;
 
   $effect(() => {
@@ -261,11 +231,11 @@ let endDate = $state(todayStr);
     // Jika user mengubah dropdown limit (misal dari 5 ke 10)
     if (meta.limit !== prevLimit) {
       prevLimit = meta.limit;
-      meta.page = 1; 
+      meta.page = 1;
       prevPage = 1;
       shouldFetch = true;
       isAppending = false; // Pastikan kalau limit berubah, datanya ditimpa (replace)
-    } 
+    }
     // Jika user mengeklik tombol prev/next page atau Load More
     else if (meta.page !== prevPage) {
       prevPage = meta.page;
@@ -289,10 +259,7 @@ let endDate = $state(todayStr);
     showDeleteModal = false;
     const isBulk = selectedItemToDelete === null;
 
-    toastStore.success(
-      `Data transaksi berhasil dihapus dari sistem.`,
-      "Terhapus",
-    );
+    toastStore.success(`Data transaksi berhasil dihapus dari sistem.`, "Terhapus");
 
     selectedItemToDelete = null;
     fetchTransactions(); // Panggil API lagi untuk refresh tabel
@@ -302,9 +269,12 @@ let endDate = $state(todayStr);
   // [DIUBAH] Ubah menjadi map yang mengembalikan nama variant Badge
   const getBadgeVariant = (status: string) => {
     switch (status) {
-      case "success": return "success";
-      case "duplicate": return "warning";
-      default: return "secondary";
+      case "success":
+        return "success";
+      case "duplicate":
+        return "warning";
+      default:
+        return "secondary";
     }
   };
 
@@ -324,34 +294,53 @@ let endDate = $state(todayStr);
   }
 </script>
 
-<div class="max-w-full mx-auto">
-  <div class="mb-4 flex justify-end md:hidden">
+<div class="max-w-full mx-auto flex flex-col gap-4 md:gap-6">
+  <div class="flex justify-end md:hidden">
     <DateRangePicker bind:startDate bind:endDate align="right" />
   </div>
+  <div class="w-full min-w-0">
+    <div class="hidden md:grid lg:grid-cols-4 md:gap-4 lg:gap-6 w-full">
+      <SummaryCard label="Total Donasi" value={formatNumber(summary.total_donasi, "currency")} icon={CircleDollarSign} trend={summary.trend_donasi >= 0 ? "up" : "down"} trendValue={`${formatTrend(summary.trend_donasi)} ${trendText}`} variant="primary" />
+      <SummaryCard label="Total Transaksi" value={summary.total_transaksi} icon={CreditCard} trend={summary.trend_transaksi >= 0 ? "up" : "down"} trendValue={`${formatTrend(summary.trend_transaksi)} ${trendText}`} variant="default" />
+      <SummaryCard label="Donatur Unik" value={summary.donatur_unik} icon={Users} trend={summary.trend_donatur >= 0 ? "up" : "down"} trendValue={`${formatTrend(summary.trend_donatur)} ${trendText}`} variant="warning" />
+      <SummaryCard label="Rata-rata / Transaksi" value={formatNumber(summary.rata_rata_donasi, "currency")} icon={Activity} trend={summary.trend_rata_rata >= 0 ? "up" : "down"} trendValue={`${formatTrend(summary.trend_rata_rata)} ${trendText}`} variant="success" />
+    </div>
+
+    <div class="block md:hidden w-full">
+      <MobileOverviewCard
+        title="Total Donasi"
+        value={formatNumber(summary.total_donasi, "currency")}
+        icon={CircleDollarSign}
+        metrics={[
+          {
+            label: "Transaksi",
+            value: summary.total_transaksi,
+            trendText: formatTrend(summary.trend_transaksi),
+            trendUp: summary.trend_transaksi >= 0,
+          },
+          {
+            label: "Donatur",
+            value: summary.donatur_unik,
+            trendText: formatTrend(summary.trend_donatur),
+            trendUp: summary.trend_donatur >= 0,
+          },
+          {
+            label: "Rata-rata",
+            value: formatNumber(summary.rata_rata_donasi, "compact"),
+            trendText: formatTrend(summary.trend_rata_rata),
+            trendUp: summary.trend_rata_rata >= 0,
+          },
+        ]}
+      />
+    </div>
+  </div>
   <Card>
-    <CardHeader
-      title="Tabel Transaksi"
-      description="Lihat dan kelola semua transaksi donasi yang telah masuk."
-      icon={ReceiptText}
-      iconColor="text-(--color-primary)"
-      class="hidden md:block"
-    >
+    <CardHeader title="Tabel Transaksi" description="Lihat dan kelola semua transaksi donasi yang telah masuk." icon={ReceiptText} iconColor="text-(--color-primary)" class="hidden md:block">
       {#snippet action()}
-        <DateRangePicker
-          bind:startDate
-          bind:endDate
-          align="right"
-          class="flex-1 md:flex-none"
-        />
+        <DateRangePicker bind:startDate bind:endDate align="right" class="flex-1 md:flex-none" />
       {/snippet}
     </CardHeader>
-    <CardHeader
-      title="Tabel Transaksi"
-      description="Lihat dan kelola semua transaksi donasi yang telah masuk."
-      icon={ReceiptText}
-      iconColor="text-(--color-primary)"
-      class="block md:hidden"
-    />
+    <CardHeader title="Tabel Transaksi" description="Lihat dan kelola semua transaksi donasi yang telah masuk." icon={ReceiptText} iconColor="text-(--color-primary)" class="block md:hidden" />
     <CardContent class="pb-3">
       <TableToolbar
         bind:searchValue
@@ -362,19 +351,12 @@ let endDate = $state(todayStr);
         actionsClass="flex items-center gap-2"
         filterButtonClass="flex items-center gap-2"
         filterLabelClass="hidden sm:inline"
-        filterActive={selectedPrograms.length > 0 ||
-          selectedRekenings.length > 0 ||
-          !!selectedStatus ||
-          isNominalFilterActive}
+        filterActive={selectedPrograms.length > 0 || selectedRekenings.length > 0 || !!selectedStatus || isNominalFilterActive}
         onResetFilter={resetFilters}
         onApplyFilter={applyModalFilter}
       >
         {#snippet extraActions()}
-          <Button
-            variant="primary"
-            onclick={handleExport}
-            class="flex items-center gap-2"
-          >
+          <Button variant="primary" onclick={handleExport} class="flex items-center gap-2">
             <Download size={16} /> <span class="hidden sm:inline">Ekspor</span>
           </Button>
         {/snippet}
@@ -383,71 +365,33 @@ let endDate = $state(todayStr);
           <div class="grid grid-cols-1 gap-4">
             <div class="flex flex-col gap-4">
               <div class="flex flex-col gap-2">
-                <Select
-                  label="Status Transaksi"
-                  options={statuses}
-                  bind:value={selectedStatus}
-                  placeholder="Semua Status"
-                />
+                <Select label="Status Transaksi" options={statuses} bind:value={selectedStatus} placeholder="Semua Status" />
               </div>
 
               <div class="flex flex-col gap-2">
-                <MultiSelect
-                  label="Program"
-                  options={programOptions}
-                  bind:values={selectedPrograms}
-                  placeholder="Pilih program"
-                  searchPlaceholder="Cari program..."
-                />
+                <MultiSelect label="Program" options={programOptions} bind:values={selectedPrograms} placeholder="Pilih program" searchPlaceholder="Cari program..." />
               </div>
             </div>
 
             <div class="flex flex-col gap-2">
-              <MultiSelect
-                label="Rekening"
-                options={rekeningOptions}
-                bind:values={selectedRekenings}
-                placeholder="Pilih rekening"
-                searchPlaceholder="Cari rekening..."
-              />
+              <MultiSelect label="Rekening" options={rekeningOptions} bind:values={selectedRekenings} placeholder="Pilih rekening" searchPlaceholder="Cari rekening..." />
             </div>
 
             <div class="flex flex-col gap-2">
-              <span class="text-sm font-medium text-(--color-text-secondary)"
-                >Nominal</span
-              >
+              <span class="text-sm font-medium text-(--color-text-secondary)">Nominal</span>
               <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <Select
-                  options={nominalOperators}
-                  bind:value={selectedNominalOperator}
-                  placeholder="Pilih operator"
-                />
+                <Select options={nominalOperators} bind:value={selectedNominalOperator} placeholder="Pilih operator" />
 
                 {#if selectedNominalOperator === "between"}
-                  <CurrencyInput
-                    bind:value={nominalFrom}
-                    placeholder="Nominal dari"
-                    currencyPrefix="Rp"
-                  />
-                  <CurrencyInput
-                    bind:value={nominalTo}
-                    placeholder="Nominal sampai"
-                    currencyPrefix="Rp"
-                  />
+                  <CurrencyInput bind:value={nominalFrom} placeholder="Nominal dari" currencyPrefix="Rp" />
+                  <CurrencyInput bind:value={nominalTo} placeholder="Nominal sampai" currencyPrefix="Rp" />
                 {:else}
-                  <CurrencyInput
-                    bind:value={nominalValue}
-                    placeholder="Masukkan nominal"
-                    currencyPrefix="Rp"
-                    class="md:col-span-2"
-                    disabled={!selectedNominalOperator}
-                  />
+                  <CurrencyInput bind:value={nominalValue} placeholder="Masukkan nominal" currencyPrefix="Rp" class="md:col-span-2" disabled={!selectedNominalOperator} />
                 {/if}
               </div>
             </div>
           </div>
         {/snippet}
-
       </TableToolbar>
 
       <div class="hidden md:block mb-4">
@@ -467,48 +411,28 @@ let endDate = $state(todayStr);
               <TableRow>
                 <TableCell>
                   <div class="flex flex-col gap-1">
-                    <span class="font-bold text-sm text-gray-900 leading-none"
-                      >{formatDate(trx.tanggal_transaksi)}</span
-                    >
-                    <span class="text-xs text-gray-500 font-medium"
-                      >{trx.id}</span
-                    >
+                    <span class="font-bold text-sm text-gray-900 leading-none">{formatDate(trx.tanggal_transaksi)}</span>
+                    <span class="text-xs text-gray-500 font-medium">{trx.id}</span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div class="flex flex-col gap-0.5">
-                    <span
-                      class="font-semibold text-sm leading-none text-gray-900"
-                      >{trx.donatur?.nama_donatur || "Hamba Allah"}</span
-                    >
-                    <span class="text-xs text-gray-600"
-                      >{trx.donatur?.nomor_hp_donatur || "-"}</span
-                    >
+                    <span class="font-semibold text-sm leading-none text-gray-900">{trx.donatur?.nama_donatur || "Hamba Allah"}</span>
+                    <span class="text-xs text-gray-600">{trx.donatur?.nomor_hp_donatur || "-"}</span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div class="flex flex-col items-start gap-1.5">
-                    <span class="font-bold text-sm text-gray-900 leading-none"
-                      >Rp {formatNumber(trx.nominal, "standard")}</span
-                    >
-                    <Badge 
-  variant={getBadgeVariant(trx.status)} 
-  size="sm" 
-  class="text-[10px] uppercase tracking-wider"
->
-  {statusLabels[trx.status] || trx.status}
-</Badge>
+                    <span class="font-bold text-sm text-gray-900 leading-none">Rp {formatNumber(trx.nominal, "standard")}</span>
+                    <Badge variant={getBadgeVariant(trx.status)} size="sm" class="text-[10px] uppercase tracking-wider">
+                      {statusLabels[trx.status] || trx.status}
+                    </Badge>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div class="flex flex-col gap-0.5">
-                    <span
-                      class="font-semibold text-sm leading-none text-gray-900"
-                      >{trx.program}</span
-                    >
-                    <span
-                      class="text-[10px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded w-max mt-0.5"
-                    >
+                    <span class="font-semibold text-sm leading-none text-gray-900">{trx.program}</span>
+                    <span class="text-[10px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded w-max mt-0.5">
                       {trx.sumber || "-"}
                     </span>
                   </div>
@@ -516,40 +440,27 @@ let endDate = $state(todayStr);
                 <TableCell class="text-right">
                   <Dropdown width="w-36" align="right">
                     {#snippet trigger()}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        class="h-8 w-8 p-0 "
-                      >
-                        <MoreHorizontal size={16} />
+                      <Button variant="ghost" size="sm" class="p-0!">
+                        <Ellipsis size={20} />
                       </Button>
                     {/snippet}
-                    <DropdownItem
-                      icon={Eye}
-                      onclick={() => console.log("Detail", trx.id)}
-                      >Lihat Detail</DropdownItem
-                    >
-                    <DropdownItem
-                      icon={Edit}
-                      onclick={() => console.log("Edit", trx.id)}
-                      >Ubah Data</DropdownItem
-                    >
+                    <DropdownItem icon={Eye} onclick={() => console.log("Detail", trx.id)}>Lihat Detail</DropdownItem>
+                    <DropdownItem icon={Edit} onclick={() => console.log("Edit", trx.id)}>Ubah Data</DropdownItem>
                     <div class="border-t border-(--color-border) my-1"></div>
-                    <DropdownItem
-                      icon={Trash2}
-                      variant="danger"
-                      onclick={() => confirmDelete(trx.id)}
-                      >Hapus</DropdownItem
-                    >
+                    <DropdownItem icon={Trash2} variant="danger" onclick={() => confirmDelete(trx.id)}>Hapus</DropdownItem>
                   </Dropdown>
                 </TableCell>
               </TableRow>
             {:else}
               <TableRow>
                 <TableCell colspan={5} class="h-40 text-center text-gray-500">
-                  {isLoading
-                    ? "Menyinkronkan data..."
-                    : "Tidak ada transaksi yang ditemukan."}
+                  {#if isLoading}
+                    <LoadingBars size={50} class="text-(--color-primary)" />
+                  {:else}
+                    <div class="flex flex-col items-center justify-center text-gray-400">
+                      <span class="text-sm">Tidak ada transaksi yang ditemukan.</span>
+                    </div>
+                  {/if}
                 </TableCell>
               </TableRow>
             {/each}
@@ -559,51 +470,32 @@ let endDate = $state(todayStr);
 
       <div class="md:hidden flex flex-col bg-gray-50/30 gap-3">
         {#each transactions as trx (trx.id)}
-          <SimpleTableCard
-            name={trx.donatur?.nama_donatur || "Hamba Allah"}
-            phone={trx.donatur?.nomor_hp_donatur || "-"}
-            program={trx.program}
-            date={formatDate(trx.tanggal_transaksi)}
-            amount={formatNumber(trx.nominal, "standard")}
-            statusLabel={statusLabels[trx.status] || trx.status}
-            statusVariant={getBadgeVariant(trx.status)}
-          />
+          <SimpleTableCard name={trx.donatur?.nama_donatur || "Hamba Allah"} phone={trx.donatur?.nomor_hp_donatur || "-"} program={trx.program} date={formatDate(trx.tanggal_transaksi)} amount={formatNumber(trx.nominal, "standard")} statusLabel={statusLabels[trx.status] || trx.status} statusVariant={getBadgeVariant(trx.status)} />
         {:else}
-          <div
-            class="py-10 text-center text-sm text-gray-500 border border-dashed rounded-lg"
-          >
-            {isLoading ? "Menyinkronkan data..." : "Tidak ada transaksi."}
+          <div class="py-10 flex justify-center text-center text-sm text-gray-500 border border-dashed rounded-lg">
+            {#if isLoading}
+              <LoadingBars size={35} class="text-(--color-primary)" />
+            {:else}
+              Tidak ada transaksi yang ditemukan.
+            {/if}
           </div>
         {/each}
       </div>
-
     </CardContent>
     <CardFooter class="p-3! md:px-6!">
       {#if transactions.length > 0}
         <div class="md:hidden w-full">
           {#if meta.page < meta.total_page}
-            <Button
-              variant="outline"
-              class="w-full py-2.5 text-sm"
-              onclick={loadMore}
-              disabled={isLoading}
-            >
+            <Button variant="outline" class="w-full py-2.5 text-sm" onclick={loadMore} disabled={isLoading}>
               {isLoading ? "Memuat..." : "Tampilkan Lebih Banyak"}
             </Button>
           {:else}
-            <p class="text-center text-xs text-gray-400">
-              Semua data telah ditampilkan
-            </p>
+            <p class="text-center text-xs text-gray-400">Semua data telah ditampilkan</p>
           {/if}
         </div>
 
         <div class="hidden md:block w-full">
-          <Pagination
-            bind:currentPage={meta.page}
-            bind:pageSize={meta.limit}
-            totalPages={meta.total_page}
-            totalData={meta.total_data}
-          />
+          <Pagination bind:currentPage={meta.page} bind:pageSize={meta.limit} totalPages={meta.total_page} totalData={meta.total_data} />
         </div>
       {/if}
     </CardFooter>
@@ -612,22 +504,14 @@ let endDate = $state(todayStr);
 
 <Modal bind:open={showDeleteModal} size="sm">
   <div class="flex flex-col items-center text-center pt-4 pb-2">
-    <div
-      class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4"
-    >
+    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
       <TriangleAlert size={24} strokeWidth={2} />
     </div>
     <h3 class="text-lg font-bold text-gray-900 mb-2">Hapus Transaksi?</h3>
   </div>
 
   {#snippet footer()}
-    <Button
-      variant="outline"
-      class="w-full"
-      onclick={() => (showDeleteModal = false)}>Batal</Button
-    >
-    <Button variant="danger" class="w-full" onclick={executeDelete}
-      >Ya, Hapus Data</Button
-    >
+    <Button variant="outline" class="w-full" onclick={() => (showDeleteModal = false)}>Batal</Button>
+    <Button variant="danger" class="w-full" onclick={executeDelete}>Ya, Hapus Data</Button>
   {/snippet}
 </Modal>

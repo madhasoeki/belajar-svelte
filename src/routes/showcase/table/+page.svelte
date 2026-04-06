@@ -15,7 +15,7 @@
   import TableHead from "$lib/components/ui/table/TableHead.svelte";
   import TableCell from "$lib/components/ui/table/TableCell.svelte";
   import TableToolbar from "$lib/components/ui/table/TableToolbar.svelte";
-  import Pagination from "$lib/components/ui/pagintaion/Pagination.svelte";
+  import Pagination from "$lib/components/ui/pagination/Pagination.svelte";
 
   // Import UI Components lainnya
   import Button from "$lib/components/ui/button/Button.svelte";

@@ -3,10 +3,11 @@
   import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableToolbar } from "$lib/components/ui/table";
   import { Select, MultiSelect, CurrencyInput, DateRangePicker } from "$lib/components/ui/forms";
   import { Dropdown, DropdownItem } from "$lib/components/ui/dropdown";
-  import Pagination from "$lib/components/ui/pagintaion/Pagination.svelte";
+  import Pagination from "$lib/components/ui/pagination/Pagination.svelte";
   import Button from "$lib/components/ui/button/Button.svelte";
   import Modal from "$lib/components/ui/modal/Modal.svelte";
   import Badge from "$lib/components/ui/badge/Badge.svelte";
+  import LoadingBars from "$lib/components/ui/loading/LoadingBars.svelte";
   import { toastStore } from "$lib/stores/toast.svelte";
 
   // Import Icons
@@ -28,7 +29,7 @@
     total_page: 1,
     total_data: 0,
   });
-  let isLoading = $state(false);
+  let isLoading = $state(true);
   let isAppending = false;
 
   // --- STATE FILTER & PENCARIAN ---
@@ -558,8 +559,14 @@
               </TableRow>
             {:else}
               <TableRow>
-                <TableCell colspan={6} class="h-40 text-center text-gray-500">
-                  {isLoading ? "Menyinkronkan data..." : "Tidak ada donatur yang ditemukan."}
+                <TableCell colspan={7} class="h-60 text-center text-gray-500">
+                  {#if isLoading}
+                    <LoadingBars size={50} class="text-(--color-primary)" />
+                  {:else}
+                    <div class="flex flex-col items-center justify-center text-gray-400">
+                      <span class="text-sm">Tidak ada donatur yang ditemukan.</span>
+                    </div>
+                  {/if}
                 </TableCell>
               </TableRow>
             {/each}
@@ -665,8 +672,12 @@
             </div>
           </div>
         {:else}
-          <div class="py-10 text-center text-sm text-gray-500 border border-dashed rounded-lg">
-            {isLoading ? "Menyinkronkan data..." : "Tidak ada donatur."}
+          <div class="py-16 flex justify-center text-center text-sm text-gray-500 border border-dashed border-gray-200 rounded-lg bg-gray-50/50">
+            {#if isLoading}
+              <LoadingBars size={40} class="text-(--color-primary)" />
+            {:else}
+              Tidak ada donatur.
+            {/if}
           </div>
         {/each}
       </div>
