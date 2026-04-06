@@ -12,24 +12,23 @@
   import LoadingBars from "$lib/components/ui/loading/LoadingBars.svelte";
   import { toastStore } from "$lib/stores/toast.svelte";
 
-  import { Edit, Trash2, Eye, TriangleAlert, Download, ReceiptText, CircleEllipsis, Ellipsis, CircleDollarSign, CreditCard, Users, Activity } from "lucide-svelte";
+  import { Trash2, Eye, TriangleAlert, Download, ReceiptText, Ellipsis, CircleDollarSign, CreditCard, Users, Activity, Pencil } from "lucide-svelte";
 
   import { formatNumber } from "$lib/utils/formatter";
   import { apiClient } from "$lib/utils/api";
   import { API_ENDPOINTS } from "$lib/constans/endpoints";
 
-  // --- STATE TANGGAL DEFAULT (HARI INI - WAKTU LOKAL) ---
   const now = new Date();
-  const year = now.getFullYear(); // Mengambil tahun lokal
-  const month = String(now.getMonth() + 1).padStart(2, "0"); // Mengambil bulan lokal (ditambah 1 karena index mulai dari 0)
-  const day = String(now.getDate()).padStart(2, "0"); // Mengambil tanggal lokal
+  const year = now.getFullYear(); 
+  const month = String(now.getMonth() + 1).padStart(2, "0"); 
+  const day = String(now.getDate()).padStart(2, "0");
 
   const todayStr = `${year}-${month}-${day}`;
 
   let startDate = $state(todayStr);
   let endDate = $state(todayStr);
 
-  // --- STATE DATA & META (DARI API) ---
+
   let transactions = $state<any[]>([]);
   let meta = $state({
     page: 1,
@@ -38,14 +37,8 @@
     total_data: 0,
   });
   let isLoading = $state(true);
-
-  // --- STATE FILTER & PENCARIAN ---
   let searchValue = $state("");
-
-  // Array untuk Multi-select
-  let selectedPrograms = $state<string[]>([]);
-  let selectedRekenings = $state<string[]>([]);
-  let selectedStatus = $state(""); // Status biasanya tunggal, tapi bisa diubah array jika mau
+  let selectedStatus = $state(""); 
   let selectedNominalOperator = $state("");
   let nominalValue = $state<number | null>(null);
   let nominalFrom = $state<number | null>(null);
@@ -72,23 +65,57 @@
     return `${isPositive ? '+' : ''}${val}%`;
   }
 
-  const programs = ["Wakaf Sumur", "Pembangunan Masjid", "Infaq Umum", "Indonesia Cetak Huffadz"];
-  const rekenings = ["BCA - 1234567890", "MANDIRI - 1122334455", "BSI - 7123456789"];
+  let selectedPrograms = $state<string[]>([]);
+  let selectedRekenings = $state<string[]>([]);
+  let selectedSumbers = $state<string[]>([]); // Tambahan untuk sumber
+
+  // [BARU] State untuk opsi Dropdown API
+  let programOptions = $state<{label: string, value: string}[]>([]);
+  let rekeningOptions = $state<{label: string, value: string}[]>([]);
+  let sumberOptions = $state<{label: string, value: string}[]>([]);
+
+  // (Biarkan const statuses tetap statis karena nilainya baku)
   const statuses = [
     { label: "Semua Status", value: "" },
     { label: "Berhasil", value: "success" },
     { label: "Duplikat", value: "duplicate" },
   ];
 
-  const programOptions = programs.map((program) => ({
-    label: program,
-    value: program,
-  }));
+  // --- FUNGSI AMBIL MASTER DATA FILTER ---
+  async function fetchMasterData() {
+    try {
+      const [progRes, rekRes, sumberRes] = await Promise.all([
+        apiClient.get(API_ENDPOINTS.PROGRAM.LIST),
+        apiClient.get(API_ENDPOINTS.REKENING.LIST),
+        apiClient.get(API_ENDPOINTS.SUMBER.LIST)
+      ]);
+      
+      programOptions = (progRes.data || []).map((item: any) => ({
+        label: item.nama_program,
+        value: item.id
+      }));
+      
+      rekeningOptions = (rekRes.data || []).map((item: any) => ({
+        label: `${item.alias} - ${item.nomor_rekening}`, 
+        value: item.id
+      }));
+      
+      sumberOptions = (sumberRes.data || []).map((item: any) => ({
+        label: item.sumber_transaksi,
+        value: item.id
+      }));
+    } catch (error) {
+      console.error("Gagal memuat master data filter:", error);
+      toastStore.error("Gagal memuat pilihan filter dari server.");
+    }
+  }
 
-  const rekeningOptions = rekenings.map((rekening) => ({
-    label: rekening,
-    value: rekening,
-  }));
+  // Panggil sekali saat komponen dimuat
+  $effect(() => {
+    if (programOptions.length === 0) {
+      fetchMasterData();
+    }
+  });
 
   const nominalOperators = [
     { label: "Tanpa Filter", value: "" },
@@ -123,6 +150,7 @@
     // Konversi array multi-select menjadi string pisah koma (misal: "Wakaf Sumur,Infaq Umum")
     if (selectedPrograms.length > 0) params.append("program", selectedPrograms.join(","));
     if (selectedRekenings.length > 0) params.append("rekening", selectedRekenings.join(","));
+    if (selectedSumbers.length > 0) params.append("sumber", selectedSumbers.join(","));
     if (selectedStatus) params.append("status", selectedStatus);
 
     if (selectedNominalOperator === "between") {
@@ -185,6 +213,7 @@
   function resetFilters() {
     selectedPrograms = [];
     selectedRekenings = [];
+    selectedSumbers = [];
     selectedStatus = "";
     selectedNominalOperator = "";
     nominalValue = null;
@@ -196,9 +225,6 @@
     const qs = buildQueryParams(true);
     window.location.href = `http://localhost:8080/api/transaksi/export?${qs}`;
   }
-
-  // 1. Debounce untuk Kotak Pencarian
-  // --- LOGIKA REAKTIF (AUTO-APPLY) ---
 
   // 1. Debounce untuk Kotak Pencarian (BIARKAN)
   let searchTimeout: ReturnType<typeof setTimeout>;
@@ -351,7 +377,7 @@
         actionsClass="flex items-center gap-2"
         filterButtonClass="flex items-center gap-2"
         filterLabelClass="hidden sm:inline"
-        filterActive={selectedPrograms.length > 0 || selectedRekenings.length > 0 || !!selectedStatus || isNominalFilterActive}
+        filterActive={selectedPrograms.length > 0 || selectedRekenings.length > 0 || selectedSumbers.length > 0 || !!selectedStatus || isNominalFilterActive}
         onResetFilter={resetFilters}
         onApplyFilter={applyModalFilter}
       >
@@ -375,6 +401,10 @@
 
             <div class="flex flex-col gap-2">
               <MultiSelect label="Rekening" options={rekeningOptions} bind:values={selectedRekenings} placeholder="Pilih rekening" searchPlaceholder="Cari rekening..." />
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <MultiSelect label="Sumber Transaksi" options={sumberOptions} bind:values={selectedSumbers} placeholder="Pilih sumber" searchPlaceholder="Cari sumber..." />
             </div>
 
             <div class="flex flex-col gap-2">
@@ -431,7 +461,7 @@
                 </TableCell>
                 <TableCell>
                   <div class="flex flex-col gap-0.5">
-                    <span class="font-semibold text-sm leading-none text-gray-900">{trx.program}</span>
+                    <span class="font-semibold text-sm leading-none text-gray-900">{trx.program || "-"}</span>
                     <span class="text-[10px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded w-max mt-0.5">
                       {trx.sumber || "-"}
                     </span>
@@ -445,7 +475,7 @@
                       </Button>
                     {/snippet}
                     <DropdownItem icon={Eye} onclick={() => console.log("Detail", trx.id)}>Lihat Detail</DropdownItem>
-                    <DropdownItem icon={Edit} onclick={() => console.log("Edit", trx.id)}>Ubah Data</DropdownItem>
+                    <DropdownItem icon={Pencil} onclick={() => console.log("Edit", trx.id)}>Ubah Data</DropdownItem>
                     <div class="border-t border-(--color-border) my-1"></div>
                     <DropdownItem icon={Trash2} variant="danger" onclick={() => confirmDelete(trx.id)}>Hapus</DropdownItem>
                   </Dropdown>

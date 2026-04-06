@@ -25,36 +25,55 @@
   let donationDate = $state(todayLocal);
   let isLoading = $state(false);
 
+  
+  const greetings = ["Kak", "Ayah", "Bunda", "Bapak", "Ibu"];
+  
+  let programs = $state<{label: string, value: string}[]>([]);
+  let rekenings = $state<{label: string, value: string}[]>([]);
+  let sumber = $state<{label: string, value: string}[]>([]);
+  
+  // --- FUNGSI AMBIL MASTER DATA ---
+  async function fetchMasterData() {
+    try {
+      // Tembak dua endpoint sekaligus (Parallel Request)
+      const [progRes, rekRes, sumberRes] = await Promise.all([
+        apiClient.get(API_ENDPOINTS.PROGRAM.LIST),
+        apiClient.get(API_ENDPOINTS.REKENING.LIST),
+        apiClient.get(API_ENDPOINTS.SUMBER.LIST)
+      ]);
+      
+      // Petakan JSON Program
+      programs = (progRes.data || []).map((item: any) => ({
+        label: item.nama_program,
+        value: item.id // Atau item.id jika Golang butuh ID-nya
+      }));
+      
+      // Petakan JSON Rekening (Format: "BNI - 8123456781")
+      rekenings = (rekRes.data || []).map((item: any) => ({
+        label: `${item.alias} - ${item.nomor_rekening}`, 
+        value: `${item.id}` // Atau item.id jika Golang butuh ID-nya
+      }));
+      
+      // Petakan JSON Sumber (Format: "Iklan", "Broadcast WhatsApp", dll)
+      sumber = (sumberRes.data || []).map((item: any) => ({
+        label: item.sumber_transaksi,
+        value: item.id // Atau item.id jika Golang butuh ID-nya
+      }));
+    } catch (error) {
+      console.error("Gagal memuat master data program/rekening:", error);
+      toastStore.error("Gagal memuat pilihan program dan rekening dari server.");
+    }
+  }
+  
   $effect(() => {
     if (donorPhone !== lastSelectedPhone) {
       donaturId = "";
     }
+
+    if (programs.length === 0 && rekenings.length === 0) {
+      fetchMasterData();
+    }
   });
-
-  const greetings = ["Kak", "Ayah", "Bunda", "Bapak", "Ibu"];
-
-  const programs = [
-    { label: "Wakaf Sumur", value: "Wakaf Sumur" },
-    { label: "Pembangunan Masjid", value: "Pembangunan Masjid" },
-    { label: "Beasiswa Tahfidz", value: "Beasiswa Tahfidz" },
-    { label: "Indonesia Cetak Huffadz", value: "Indonesia Cetak Huffadz" },
-    { label: "Zakat Fitrah", value: "Zakat Fitrah" },
-    { label: "Infaq Umum", value: "Infaq Umum" },
-  ];
-
-  const rekenings = [
-    { label: "BCA - 1234567890", value: "BCA - 1234567890" },
-    { label: "BSI - 7123456789", value: "BSI - 7123456789" },
-    { label: "BNI - 0987654321", value: "BNI - 0987654321" },
-    { label: "MANDIRI - 1122334455", value: "MANDIRI - 1122334455" },
-  ];
-
-  const sumber = [
-    { label: "Iklan", value: "Iklan" },
-    { label: "Broadcast WhatsApp", value: "Broadcast WhatsApp" },
-    { label: "Broadcast Email", value: "Broadcast Email" },
-    { label: "Story WhatsApp", value: "Story WhatsApp" },
-  ];
 
   const quickAmounts = [5000, 10000, 25000, 50000, 100000];
 
@@ -117,16 +136,15 @@
       nomor_hp_donatur: donorPhone,
 
       tanggal_transaksi: donationDate, 
-      program: selectedProgram, 
-      rekening: selectedRekening, 
+      program_id: selectedProgram, 
+      rekening_id: selectedRekening, 
+      sumber_id: selectedSumber, 
       nominal: rawAmount, 
-      sumber: selectedSumber, 
       status: "success",
     };
 
     try {
       const response = await apiClient.post(API_ENDPOINTS.DONASI.CREATE, payload);
-      console.log("Response dari server:", response);
 
       toastStore.success(`Donasi Rp ${formatNumber(Number(rawAmount), "standard")} atas nama ${donorName} telah dicatat.`, "Berhasil!");
 

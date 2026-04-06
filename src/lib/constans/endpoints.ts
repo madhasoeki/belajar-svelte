@@ -17,5 +17,14 @@ export const API_ENDPOINTS = {
   },
   DOMISILI: {
     LIST: "/domisili",
+  },
+  REKENING: {
+    LIST: "/rekening",
+  },
+  SUMBER: {
+    LIST: "/sumber",
+  },
+  PROGRAM: {
+    LIST: "/program",
   }
 } as const;
