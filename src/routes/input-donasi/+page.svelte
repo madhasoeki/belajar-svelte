@@ -1,87 +1,110 @@
 <script lang="ts">
+  // ===========================================================================
+  // --- 1. IMPORTS
+  // ===========================================================================
   import { Card, CardHeader, CardContent } from "$lib/components/ui/card";
-  import { toastStore } from "$lib/stores/toast.svelte";
-  import { Button } from "$lib/components/ui/button";
   import { Input, CurrencyInput, Select, Radio, DatePicker, PhoneAutocomplete } from "$lib/components/ui/forms";
+  import { Button } from "$lib/components/ui/button";
   import { User, Wallet, CircleCheck } from "lucide-svelte";
+  
+  import { toastStore } from "$lib/stores/toast.svelte";
   import { formatNumber } from "$lib/utils/formatter";
+  import { getLocalDateString } from "$lib/utils/date";
   import { apiClient } from "$lib/utils/api";
   import { API_ENDPOINTS } from "$lib/constans/endpoints";
-  import { getLocalDateString } from "$lib/utils/date";
 
-  // --- STATE FORMULIR ---
+  // ===========================================================================
+  // --- 2. SETUP & CONSTANTS
+  // ===========================================================================
+  const todayLocal = getLocalDateString();
+  const greetings = ["Kak", "Ayah", "Bunda", "Bapak", "Ibu"];
+  const quickAmounts = [5000, 10000, 25000, 50000, 100000];
+
+  // ===========================================================================
+  // --- 3. STATE: FORM IDENTITAS DONATUR
+  // ===========================================================================
+  let donaturId = $state("");
   let donorGreeting = $state("Kak");
   let donorName = $state("");
   let donorPhone = $state("");
+  let lastSelectedPhone = $state("");
+
+  // ===========================================================================
+  // --- 4. STATE: FORM DETAIL TRANSAKSI
+  // ===========================================================================
+  let donationDate = $state(todayLocal);
   let selectedProgram = $state("");
   let selectedRekening = $state("");
   let selectedSumber = $state("");
   let rawAmount = $state<number | null>(null);
-  let donaturId = $state("");
-  let lastSelectedPhone = $state("");
 
-
-  let todayLocal = getLocalDateString();
-  let donationDate = $state(todayLocal);
-  let isLoading = $state(false);
-
-  
-  const greetings = ["Kak", "Ayah", "Bunda", "Bapak", "Ibu"];
-  
+  // ===========================================================================
+  // --- 5. STATE: MASTER DATA (DROPDOWN OPTIONS)
+  // ===========================================================================
   let programs = $state<{label: string, value: string}[]>([]);
   let rekenings = $state<{label: string, value: string}[]>([]);
   let sumber = $state<{label: string, value: string}[]>([]);
-  
-  // --- FUNGSI AMBIL MASTER DATA ---
+
+  // ===========================================================================
+  // --- 6. STATE: UI STATUS
+  // ===========================================================================
+  let isLoading = $state(false);
+
+  // ===========================================================================
+  // --- 7. DERIVED STATE (VALIDASI)
+  // ===========================================================================
+  const phoneError = $derived(
+    donorPhone.trim() !== "" && !donorPhone.startsWith("628") 
+      ? "Nomor harus diawali dengan 628 (bukan 08)" 
+      : ""
+  );
+
+  const isValid = $derived(
+    donorName.trim() !== "" && 
+    donorPhone.startsWith("628") && 
+    donorPhone.length >= 10 && 
+    selectedProgram !== "" && 
+    selectedRekening !== "" && 
+    selectedSumber !== "" && 
+    rawAmount !== null && 
+    rawAmount > 0 && 
+    donationDate !== ""
+  );
+
+  // ===========================================================================
+  // --- 8. API FETCHING
+  // ===========================================================================
   async function fetchMasterData() {
     try {
-      // Tembak dua endpoint sekaligus (Parallel Request)
       const [progRes, rekRes, sumberRes] = await Promise.all([
         apiClient.get(API_ENDPOINTS.PROGRAM.LIST),
         apiClient.get(API_ENDPOINTS.REKENING.LIST),
         apiClient.get(API_ENDPOINTS.SUMBER.LIST)
       ]);
       
-      // Petakan JSON Program
       programs = (progRes.data || []).map((item: any) => ({
         label: item.nama_program,
-        value: item.id // Atau item.id jika Golang butuh ID-nya
+        value: item.id
       }));
       
-      // Petakan JSON Rekening (Format: "BNI - 8123456781")
       rekenings = (rekRes.data || []).map((item: any) => ({
         label: `${item.alias} - ${item.nomor_rekening}`, 
-        value: `${item.id}` // Atau item.id jika Golang butuh ID-nya
+        value: item.id
       }));
       
-      // Petakan JSON Sumber (Format: "Iklan", "Broadcast WhatsApp", dll)
       sumber = (sumberRes.data || []).map((item: any) => ({
         label: item.sumber_transaksi,
-        value: item.id // Atau item.id jika Golang butuh ID-nya
+        value: item.id
       }));
     } catch (error) {
-      console.error("Gagal memuat master data program/rekening:", error);
-      toastStore.error("Gagal memuat pilihan program dan rekening dari server.");
+      console.error("Gagal memuat master data program/rekening/sumber:", error);
+      toastStore.error("Gagal memuat pilihan formulir dari server.");
     }
   }
-  
-  $effect(() => {
-    if (donorPhone !== lastSelectedPhone) {
-      donaturId = "";
-    }
 
-    if (programs.length === 0 && rekenings.length === 0) {
-      fetchMasterData();
-    }
-  });
-
-  const quickAmounts = [5000, 10000, 25000, 50000, 100000];
-
-  // --- VALIDASI ---
-  const phoneError = $derived(donorPhone.trim() !== "" && !donorPhone.startsWith("628") ? "Nomor harus diawali dengan 628 (bukan 08)" : "");
-
-  const isValid = $derived(donorName.trim() !== "" && donorPhone.startsWith("628") && donorPhone.length >= 10 && selectedProgram !== "" && selectedRekening !== "" && selectedSumber !== "" && rawAmount !== null && rawAmount > 0 && donationDate !== "");
-
+  // ===========================================================================
+  // --- 9. FORM HANDLERS
+  // ===========================================================================
   function setQuickAmount(val: number) {
     rawAmount = val;
   }
@@ -100,7 +123,6 @@
   }) {
     donaturId = donatur.id;
     lastSelectedPhone = donatur.nomor_hp_donatur;
-
     donorName = donatur.nama_donatur;
     donorGreeting = donatur.sapaan || "Kak";
 
@@ -108,11 +130,9 @@
 
     if (donatur.transaksi && donatur.transaksi.length > 0) {
       const lastTrx = donatur.transaksi[0]; 
-
       selectedProgram = lastTrx.program;
       selectedRekening = lastTrx.rekening;
       rawAmount = lastTrx.nominal;
-
       toastMessage = `Data donatur dan riwayat donasi terakhir berhasil dimuat.`;
     } else {
       selectedProgram = "";
@@ -134,7 +154,6 @@
       nama_donatur: donorName,
       sapaan: donorGreeting, 
       nomor_hp_donatur: donorPhone,
-
       tanggal_transaksi: donationDate, 
       program_id: selectedProgram, 
       rekening_id: selectedRekening, 
@@ -144,10 +163,10 @@
     };
 
     try {
-      const response = await apiClient.post(API_ENDPOINTS.DONASI.CREATE, payload);
-
+      await apiClient.post(API_ENDPOINTS.DONASI.CREATE, payload);
       toastStore.success(`Donasi Rp ${formatNumber(Number(rawAmount), "standard")} atas nama ${donorName} telah dicatat.`, "Berhasil!");
 
+      // Reset Formulir
       donaturId = "";
       lastSelectedPhone = "";
       donorName = "";
@@ -165,6 +184,21 @@
       isLoading = false;
     }
   }
+
+  // ===========================================================================
+  // --- 10. REACTIVE EFFECTS ($effect)
+  // ===========================================================================
+  $effect(() => {
+    // Reset ID jika nomor HP diedit manual setelah autofill
+    if (donorPhone !== lastSelectedPhone) {
+      donaturId = "";
+    }
+
+    // Ambil master data hanya jika opsi masih kosong
+    if (programs.length === 0 && rekenings.length === 0) {
+      fetchMasterData();
+    }
+  });
 </script>
 
 <div class="max-w-full mx-auto flex flex-col gap-6 w-full pb-20 md:pb-6">

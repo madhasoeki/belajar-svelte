@@ -1,5 +1,8 @@
 <script lang="ts">
-  import { Card, CardHeader, CardContent, CardFooter } from "$lib/components/ui/card";
+  // ===========================================================================
+  // --- 1. IMPORTS
+  // ===========================================================================
+  import { Card, CardHeader, CardContent, CardFooter, SummaryCard, MobileOverviewCard } from "$lib/components/ui/card";
   import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableToolbar } from "$lib/components/ui/table";
   import { Select, MultiSelect, CurrencyInput, DateRangePicker } from "$lib/components/ui/forms";
   import { Dropdown, DropdownItem } from "$lib/components/ui/dropdown";
@@ -8,34 +11,49 @@
   import Modal from "$lib/components/ui/modal/Modal.svelte";
   import Badge from "$lib/components/ui/badge/Badge.svelte";
   import LoadingBars from "$lib/components/ui/loading/LoadingBars.svelte";
+  
   import { toastStore } from "$lib/stores/toast.svelte";
-
-  // Import Icons
-  import { MoreHorizontal, Edit, Trash2, Eye, TriangleAlert, Download, Users, Mail, Phone, MapPin } from "lucide-svelte";
-
-  import { formatNumber } from "$lib/utils/formatter";
+  import { formatNumber, formatTrend } from "$lib/utils/formatter";
   import { apiClient } from "$lib/utils/api";
   import { API_ENDPOINTS } from "$lib/constans/endpoints";
+  
+  import { MoreHorizontal, Edit, Trash2, Eye, TriangleAlert, Download, Users, Mail, Phone, MapPin, Activity, History, HandCoins } from "lucide-svelte";
 
-  // --- STATE TANGGAL DEFAULT (KOSONG) ---
+  // ===========================================================================
+  // --- 2. STATE: CORE DATA & PAGINATION
+  // ===========================================================================
+  let donaturs = $state<any[]>([]);
+  let meta = $state({ page: 1, limit: 10, total_page: 1, total_data: 0 });
+  let isLoading = $state(true);
+  let isAppending = $state(false);
+
+  // ===========================================================================
+  // --- 3. STATE: SUMMARY ANALYTICS
+  // ===========================================================================
+  let summary = $state({
+    total_donatur: 0,
+    tingkat_aktif: 0,
+    rata_rata_clv: 0,
+    rata_rata_frekuensi: 0,
+    trend_total_donatur: 0,
+    trend_tingkat_aktif: 0,
+    trend_clv: 0,
+    trend_frekuensi: 0.0,
+  });
+
+  // ===========================================================================
+  // --- 4. STATE: FILTERS & OPTIONS
+  // ===========================================================================
   let startDate = $state("");
   let endDate = $state("");
-
-  // --- STATE DATA & META ---
-  let donaturs = $state<any[]>([]);
-  let meta = $state({
-    page: 1,
-    limit: 10,
-    total_page: 1,
-    total_data: 0,
-  });
-  let isLoading = $state(true);
-  let isAppending = false;
-
-  // --- STATE FILTER & PENCARIAN ---
   let searchValue = $state("");
+  
   let selectedDomisilis = $state<string[]>([]);
   let selectedLabels = $state<string[]>([]);
+  let selectedChurnLabel = $state("");
+
+  let domisiliOptions = $state<any[]>([]);
+  let labelOptions = $state<any[]>([]);
 
   let selectedNominalOperator = $state("");
   let nominalValue = $state<number | null>(null);
@@ -47,46 +65,12 @@
   let trxFrom = $state<number | null>(null);
   let trxTo = $state<number | null>(null);
 
-  let domisiliOptions = $state<any[]>([]);
-  let labelOptions = $state<any[]>([]);
-
-  let selectedChurnLabel = $state("");
-
   const churnOptions = [
     { label: "Semua Status Retensi", value: "" },
     { label: "Aman", value: "Aman" },
     { label: "Warning", value: "Warning" },
     { label: "Bahaya", value: "Bahaya" },
   ];
-
-  async function fetchMasterData() {
-    try {
-      // Panggil kedua endpoint secara bersamaan agar lebih cepat (Parallel Request)
-      const [domisiliRes, labelRes] = await Promise.all([apiClient.get(API_ENDPOINTS.DOMISILI.LIST), apiClient.get(API_ENDPOINTS.LABEL.LIST)]);
-
-      // Asumsi API Golang mengembalikan format array of object.
-      // Sesuaikan mapping ini dengan struktur JSON dari Golang-mu ya!
-      domisiliOptions = (domisiliRes.data || []).map((item: any) => ({
-        value: item.nama_domisili, // [UPDATE] Ganti nama_kota menjadi nama_domisili
-        label: item.nama_domisili, // [UPDATE] Ganti nama_kota menjadi nama_domisili
-      }));
-
-      labelOptions = (labelRes.data || []).map((item: any) => ({
-        value: item.nama_label,
-        label: item.nama_label,
-      }));
-    } catch (error) {
-      console.error("Gagal mengambil master data filter", error);
-    }
-  }
-
-  // Panggil sekali saat komponen berhasil dimount ke layar
-  $effect(() => {
-    // Supaya tidak terpanggil berulang kali, pastikan array awalnya kosong
-    if (domisiliOptions.length === 0 && labelOptions.length === 0) {
-      fetchMasterData();
-    }
-  });
 
   const numericOperators = [
     { label: "Tanpa Filter", value: "" },
@@ -98,14 +82,33 @@
     { label: "Rentang", value: "between" },
   ];
 
-  const isNominalFilterActive = $derived(selectedNominalOperator === "between" ? nominalFrom !== null || nominalTo !== null : selectedNominalOperator !== "" && nominalValue !== null);
-  const isTrxFilterActive = $derived(selectedTrxOperator === "between" ? trxFrom !== null || trxTo !== null : selectedTrxOperator !== "" && trxValue !== null);
-
-  // --- STATE BULK ACTIONS & DELETE ---
+  // ===========================================================================
+  // --- 5. STATE: INLINE EDIT LABEL & UI MODALS
+  // ===========================================================================
   let showDeleteModal = $state(false);
   let selectedItemToDelete = $state<string | null>(null);
 
-  // --- FUNGSI API GOLANG ---
+  let editingLabelId = $state<string | null>(null);
+  let inlineTags = $state<string[]>([]);
+  let inlineInputValue = $state("");
+  let isSavingLabel = $state(false);
+
+  // ===========================================================================
+  // --- 6. DERIVED STATE (COMPUTED VALUES)
+  // ===========================================================================
+  const trendText = $derived(startDate === endDate ? "dari kemarin" : "vs periode sebelumnya");
+  
+  const isNominalFilterActive = $derived(
+    selectedNominalOperator === "between" ? nominalFrom !== null || nominalTo !== null : selectedNominalOperator !== "" && nominalValue !== null
+  );
+  
+  const isTrxFilterActive = $derived(
+    selectedTrxOperator === "between" ? trxFrom !== null || trxTo !== null : selectedTrxOperator !== "" && trxValue !== null
+  );
+
+  // ===========================================================================
+  // --- 7. API FETCHING & URL BUILDER
+  // ===========================================================================
   function buildQueryParams(isExport = false) {
     const params = new URLSearchParams();
 
@@ -120,6 +123,7 @@
 
     if (selectedDomisilis.length > 0) params.append("domisili", selectedDomisilis.join(","));
     if (selectedLabels.length > 0) params.append("label", selectedLabels.join(","));
+    if (selectedChurnLabel) params.append("label_churn", selectedChurnLabel);
 
     if (selectedNominalOperator === "between") {
       if (nominalFrom !== null) params.append("nominal_from", nominalFrom.toString());
@@ -139,9 +143,21 @@
       params.append("transaksi_value", trxValue.toString());
     }
 
-    if (selectedChurnLabel) params.append("label_churn", selectedChurnLabel);
-
     return params.toString();
+  }
+
+  async function fetchMasterData() {
+    try {
+      const [domisiliRes, labelRes] = await Promise.all([
+        apiClient.get(API_ENDPOINTS.DOMISILI.LIST), 
+        apiClient.get(API_ENDPOINTS.LABEL.LIST)
+      ]);
+
+      domisiliOptions = (domisiliRes.data || []).map((item: any) => ({ value: item.nama_domisili, label: item.nama_domisili }));
+      labelOptions = (labelRes.data || []).map((item: any) => ({ value: item.nama_label, label: item.nama_label }));
+    } catch (error) {
+      console.error("Gagal mengambil master data filter", error);
+    }
   }
 
   async function fetchDonaturs(append = false) {
@@ -157,6 +173,7 @@
       }
 
       if (response.meta) meta = response.meta;
+      if (response.summary) summary = response.summary;
     } catch (error) {
       toastStore.error("Gagal mengambil data dari server.", "Error");
       console.error(error);
@@ -165,6 +182,9 @@
     }
   }
 
+  // ===========================================================================
+  // --- 8. FILTER & LIST HANDLERS
+  // ===========================================================================
   function loadMore() {
     if (meta.page < meta.total_page) {
       isAppending = true;
@@ -190,6 +210,7 @@
   function resetFilters() {
     selectedDomisilis = [];
     selectedLabels = [];
+    selectedChurnLabel = "";
     selectedNominalOperator = "";
     nominalValue = null;
     nominalFrom = null;
@@ -198,7 +219,6 @@
     trxValue = null;
     trxFrom = null;
     trxTo = null;
-    selectedChurnLabel = "";
   }
 
   function handleExport() {
@@ -206,49 +226,6 @@
     window.location.href = `http://localhost:8080/api/donatur/export?${qs}`;
   }
 
-  // --- LOGIKA REAKTIF ---
-  let searchTimeout: ReturnType<typeof setTimeout>;
-  $effect(() => {
-    const query = searchValue;
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      handleFilterChange();
-    }, 500);
-  });
-
-  let prevStart = "";
-  let prevEnd = "";
-  $effect(() => {
-    if (startDate !== prevStart || endDate !== prevEnd) {
-      prevStart = startDate;
-      prevEnd = endDate;
-      handleFilterChange();
-    }
-  });
-
-  let prevPage = 1;
-  let prevLimit = 10;
-  $effect(() => {
-    let shouldFetch = false;
-
-    if (meta.limit !== prevLimit) {
-      prevLimit = meta.limit;
-      meta.page = 1;
-      prevPage = 1;
-      shouldFetch = true;
-      isAppending = false;
-    } else if (meta.page !== prevPage) {
-      prevPage = meta.page;
-      shouldFetch = true;
-    }
-
-    if (shouldFetch) {
-      fetchDonaturs(isAppending);
-      isAppending = false;
-    }
-  });
-
-  // --- FUNGSI UI & HELPER CRM ---
   function confirmDelete(id: string | null = null) {
     selectedItemToDelete = id;
     showDeleteModal = true;
@@ -261,58 +238,12 @@
     fetchDonaturs();
   }
 
-  function getChurnData(prob: number) {
-    if (prob < 0.5) return { color: "bg-green-500", label: "Aman" };
-    if (prob < 0.8) return { color: "bg-yellow-500", label: "Warning" };
-    return { color: "bg-red-500", label: "Bahaya" };
-  }
-
-  // --- FUNGSI DETEKSI KLIK DI LUAR (ANTI-BAJAK) ---
-  function clickOutside(node: HTMLElement, callback: () => void) {
-    const handleClick = (event: Event) => {
-      // 1. Jika yang diklik sudah musnah dari layar (karena dihapus), abaikan.
-      if (event.target && !document.body.contains(event.target as Node)) return;
-
-      // 2. Jika benar-benar di luar kotak, baru jalankan save
-      if (!node.contains(event.target as Node)) {
-        callback();
-      }
-    };
-
-    // Gunakan pointerdown, dan JANGAN pakai 'true' (agar tidak mencegat duluan)
-    document.addEventListener("pointerdown", handleClick);
-    return {
-      destroy() {
-        document.removeEventListener("pointerdown", handleClick);
-      },
-    };
-  }
-
-  // --- FUNGSI AUTO FOCUS (MENGGANTIKAN use:focusOnMount HTML) ---
-  function focusOnMount(node: HTMLInputElement) {
-    // Kita kasih delay super singkat (10ms) untuk memastikan
-    // elemen HTML-nya bener-bener udah selesai dirender sama browser
-    setTimeout(() => {
-      if (node) node.focus();
-    }, 10);
-  }
-
-  // --- STATE & FUNGSI INLINE EDIT LABEL ---
-  let editingLabelId = $state<string | null>(null);
-  let inlineTags = $state<string[]>([]);
-  let inlineInputValue = $state("");
-  let isSavingLabel = $state(false);
-
+  // ===========================================================================
+  // --- 9. INLINE EDIT HANDLERS (LABEL)
+  // ===========================================================================
   function startInlineEdit(donatur: any) {
     editingLabelId = donatur.id;
-    if (donatur.label) {
-      inlineTags = donatur.label
-        .split(",")
-        .map((l: string) => l.trim().toUpperCase())
-        .filter((l: string) => l !== "");
-    } else {
-      inlineTags = [];
-    }
+    inlineTags = donatur.label ? donatur.label.split(",").map((l: string) => l.trim().toUpperCase()).filter((l: string) => l !== "") : [];
     inlineInputValue = "";
   }
 
@@ -322,9 +253,7 @@
       const newTag = inlineInputValue.trim().toUpperCase();
 
       if (newTag) {
-        if (!inlineTags.includes(newTag)) {
-          inlineTags = [...inlineTags, newTag];
-        }
+        if (!inlineTags.includes(newTag)) inlineTags = [...inlineTags, newTag];
         inlineInputValue = "";
       } else if (e.key === "Enter") {
         saveInlineEdit(donaturId);
@@ -349,19 +278,14 @@
 
     let finalTags = [...inlineTags];
     const pendingTag = inlineInputValue.trim().toUpperCase();
-    if (pendingTag && !finalTags.includes(pendingTag)) {
-      finalTags.push(pendingTag);
-    }
+    if (pendingTag && !finalTags.includes(pendingTag)) finalTags.push(pendingTag);
 
     const finalLabelString = finalTags.join(", ");
 
     try {
-      // [DIUBAH] Sekarang pakai konstan API_ENDPOINTS!
       const endpoint = API_ENDPOINTS.DONATUR.UPDATE_LABEL(donaturId);
       await apiClient.patch(endpoint, { label: finalLabelString });
-
       toastStore.success(`Label berhasil diperbarui!`, "Sukses");
-
       donaturs = donaturs.map((d) => (d.id === donaturId ? { ...d, label: finalLabelString } : d));
       editingLabelId = null;
     } catch (error) {
@@ -370,11 +294,152 @@
       isSavingLabel = false;
     }
   }
+
+  // ===========================================================================
+  // --- 10. HELPERS & SVELTE ACTIONS
+  // ===========================================================================
+  function getChurnData(prob: number) {
+    if (prob < 0.5) return { color: "bg-green-500", label: "Aman" };
+    if (prob < 0.8) return { color: "bg-yellow-500", label: "Warning" };
+    return { color: "bg-red-500", label: "Bahaya" };
+  }
+
+  function clickOutside(node: HTMLElement, callback: () => void) {
+    const handleClick = (event: Event) => {
+      if (event.target && !document.body.contains(event.target as Node)) return;
+      if (!node.contains(event.target as Node)) callback();
+    };
+    document.addEventListener("pointerdown", handleClick);
+    return {
+      destroy() { document.removeEventListener("pointerdown", handleClick); },
+    };
+  }
+
+  function focusOnMount(node: HTMLInputElement) {
+    setTimeout(() => { if (node) node.focus(); }, 10);
+  }
+
+  // ===========================================================================
+  // --- 11. REACTIVE EFFECTS ($effect)
+  // ===========================================================================
+  
+  // Initial Fetch Master Data
+  $effect(() => {
+    if (domisiliOptions.length === 0 && labelOptions.length === 0) fetchMasterData();
+  });
+
+  // Debounce Search Filter
+  let searchTimeout: ReturnType<typeof setTimeout>;
+  $effect(() => {
+    const query = searchValue;
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => { handleFilterChange(); }, 500);
+  });
+
+  // Auto-apply Date Filter
+  let prevStart = "";
+  let prevEnd = "";
+  $effect(() => {
+    if (startDate !== prevStart || endDate !== prevEnd) {
+      prevStart = startDate;
+      prevEnd = endDate;
+      handleFilterChange();
+    }
+  });
+
+  // Pagination & Limit Change Handler
+  let prevPage = 1;
+  let prevLimit = 10;
+  $effect(() => {
+    let shouldFetch = false;
+    if (meta.limit !== prevLimit) {
+      prevLimit = meta.limit;
+      meta.page = 1;
+      prevPage = 1;
+      shouldFetch = true;
+      isAppending = false;
+    } else if (meta.page !== prevPage) {
+      prevPage = meta.page;
+      shouldFetch = true;
+    }
+
+    if (shouldFetch) {
+      fetchDonaturs(isAppending);
+      isAppending = false;
+    }
+  });
 </script>
 
-<div class="max-w-full mx-auto">
-  <div class="mb-4 flex justify-end md:hidden">
+<div class="max-w-full mx-auto flex flex-col gap-4 md:gap-6">
+  <div class="flex justify-end md:hidden">
     <DateRangePicker bind:startDate bind:endDate align="right" />
+  </div>
+  <div class="w-full min-w-0">
+    <div class="hidden md:grid lg:grid-cols-4 md:gap-4 lg:gap-6 w-full">
+      <SummaryCard
+        label="Total Donatur"
+        value={formatNumber(summary.total_donatur, "standard")}
+        icon={Users}
+        trend={summary.trend_total_donatur > 0 ? "up" : summary.trend_total_donatur < 0 ? "down" : null}
+        trendValue={summary.trend_total_donatur !== 0 ? `${formatTrend(summary.trend_total_donatur)} ${trendText}` : undefined}
+        variant="primary"
+      />
+      
+      <SummaryCard 
+        label="Tingkat Aktif Donatur" 
+        value={`${summary.tingkat_aktif}%`} 
+        icon={Activity} 
+        trend={summary.trend_tingkat_aktif > 0 ? "up" : summary.trend_tingkat_aktif < 0 ? "down" : null} 
+        trendValue={summary.trend_tingkat_aktif !== 0 ? `${formatTrend(summary.trend_tingkat_aktif)} ${trendText}` : undefined} 
+        variant="default" 
+      />
+      
+      <SummaryCard 
+        label="Rata-Rata Donasi (CLV)" 
+        value={formatNumber(summary.rata_rata_clv, "currency")} 
+        icon={HandCoins} 
+        trend={summary.trend_clv > 0 ? "up" : summary.trend_clv < 0 ? "down" : null} 
+        trendValue={summary.trend_clv !== 0 ? `${formatTrend(summary.trend_clv)} ${trendText}` : undefined} 
+        variant="warning" 
+      />
+      
+      <SummaryCard 
+        label="Frekuensi Donasi" 
+        value={`${summary.rata_rata_frekuensi}x`} 
+        icon={History} 
+        trend={summary.trend_frekuensi > 0 ? "up" : summary.trend_frekuensi < 0 ? "down" : null} 
+        trendValue={summary.trend_frekuensi !== 0 ? `${formatTrend(summary.trend_frekuensi)} ${trendText}` : undefined} 
+        variant="success" 
+      />
+    </div>
+
+    <div class="block md:hidden w-full">
+      <MobileOverviewCard
+        title="Total Donatur"
+        value={formatNumber(summary.total_donatur, "standard")}
+        icon={Users}
+        metrics={[
+          {
+            label: "Keaktifan",
+            value: `${summary.tingkat_aktif}%`,
+            trendText: summary.trend_tingkat_aktif !== 0 ? formatTrend(summary.trend_tingkat_aktif) : undefined,
+            trendUp: summary.trend_tingkat_aktif > 0 ? true : summary.trend_tingkat_aktif < 0 ? false : undefined,
+          },
+          {
+            label: "Rata-Rata",
+            value: `Rp ${formatNumber(summary.rata_rata_clv, "compact")}`,
+            trendText: summary.trend_clv !== 0 ? formatTrend(summary.trend_clv) : undefined,
+            trendUp: summary.trend_clv > 0 ? true : summary.trend_clv < 0 ? false : undefined,
+          },
+          {
+            label: "Frekuensi",
+            value: `${summary.rata_rata_frekuensi}x`,
+            trendText: summary.trend_frekuensi !== 0 ? formatTrend(summary.trend_frekuensi) : undefined,
+            trendUp: summary.trend_frekuensi > 0 ? true : summary.trend_frekuensi < 0 ? false : undefined,
+          },
+        ]}
+      />
+    </div>
   </div>
   <Card>
     <CardHeader title="Daftar Donatur" description="Kelola dan pantau analitik perilaku donatur secara real-time." icon={Users} iconColor="text-blue-600" class="hidden md:block">
@@ -455,7 +520,8 @@
           <TableHeader>
             <TableRow>
               <TableHead>Donatur</TableHead>
-              <TableHead>Kontak</TableHead> <TableHead>Domisili</TableHead>
+              <TableHead>Kontak</TableHead>
+              <TableHead>Domisili</TableHead>
               <TableHead>Label</TableHead>
               <TableHead>Analitik Transaksi</TableHead>
               <TableHead>Total Donasi (CLV)</TableHead>
@@ -583,13 +649,13 @@
                 <span class="font-bold text-sm text-gray-900 leading-none">
                   {dnt.sapaan ? `${dnt.sapaan} ` : ""}{dnt.nama_donatur}
                 </span>
-                
+
                 <div class="flex flex-col gap-1.5 mt-0.5">
                   <div class="flex items-center gap-2 text-gray-600">
                     <Phone size={12} class="shrink-0" />
                     <span class="text-xs font-medium">{dnt.nomor_hp_donatur}</span>
                   </div>
-                  
+
                   {#if dnt.email}
                     <div class="flex items-center gap-2 text-gray-500">
                       <Mail size={12} class="shrink-0" />

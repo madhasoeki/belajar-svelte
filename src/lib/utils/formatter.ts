@@ -27,3 +27,14 @@ export function formatNumber(
   
   return new Intl.NumberFormat("id-ID").format(value);
 }
+
+/**
+ * Format angka persentase trend dengan tanda plus/minus
+ * @param val Angka trend (contoh: 5.2, -1.5, 0)
+ */
+export function formatTrend(val: number) {
+  if (val === 0) return "0%"; // Biar 0 gak dikasih tanda plus
+  const isPositive = val > 0;
+  // Angka negatif otomatis sudah bawa tanda "-" dari Javascript-nya
+  return `${isPositive ? "+" : ""}${val}%`;
+}

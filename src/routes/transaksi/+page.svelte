@@ -1,49 +1,44 @@
 <script lang="ts">
+  // ===========================================================================
+  // --- 1. IMPORTS
+  // ===========================================================================
   import { Card, CardHeader, CardContent, SimpleTableCard, CardFooter, MobileOverviewCard, SummaryCard, ProgressCard } from "$lib/components/ui/card";
   import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableToolbar } from "$lib/components/ui/table";
   import { Select, MultiSelect, CurrencyInput, DateRangePicker } from "$lib/components/ui/forms";
   import { Dropdown, DropdownItem } from "$lib/components/ui/dropdown";
   import Pagination from "$lib/components/ui/pagination/Pagination.svelte";
-
-  // Import UI Components lainnya
   import Button from "$lib/components/ui/button/Button.svelte";
   import Modal from "$lib/components/ui/modal/Modal.svelte";
   import Badge from "$lib/components/ui/badge/Badge.svelte";
   import LoadingBars from "$lib/components/ui/loading/LoadingBars.svelte";
+  
   import { toastStore } from "$lib/stores/toast.svelte";
-
-  import { Trash2, Eye, TriangleAlert, Download, ReceiptText, Ellipsis, CircleDollarSign, CreditCard, Users, Activity, Pencil } from "lucide-svelte";
-
-  import { formatNumber } from "$lib/utils/formatter";
+  import { formatNumber, formatTrend } from "$lib/utils/formatter";
   import { apiClient } from "$lib/utils/api";
   import { API_ENDPOINTS } from "$lib/constans/endpoints";
+  
+  import { Trash2, Eye, TriangleAlert, Download, ReceiptText, Ellipsis, CircleDollarSign, CreditCard, Users, Activity, Pencil } from "lucide-svelte";
 
+  // ===========================================================================
+  // --- 2. SETUP TANGGAL HARI INI
+  // ===========================================================================
   const now = new Date();
-  const year = now.getFullYear(); 
-  const month = String(now.getMonth() + 1).padStart(2, "0"); 
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
-
   const todayStr = `${year}-${month}-${day}`;
 
-  let startDate = $state(todayStr);
-  let endDate = $state(todayStr);
-
-
+  // ===========================================================================
+  // --- 3. STATE: CORE DATA & PAGINATION
+  // ===========================================================================
   let transactions = $state<any[]>([]);
-  let meta = $state({
-    page: 1,
-    limit: 10,
-    total_page: 1,
-    total_data: 0,
-  });
+  let meta = $state({ page: 1, limit: 10, total_page: 1, total_data: 0 });
   let isLoading = $state(true);
-  let searchValue = $state("");
-  let selectedStatus = $state(""); 
-  let selectedNominalOperator = $state("");
-  let nominalValue = $state<number | null>(null);
-  let nominalFrom = $state<number | null>(null);
-  let nominalTo = $state<number | null>(null);
+  let isAppending = $state(false);
 
+  // ===========================================================================
+  // --- 4. STATE: SUMMARY ANALYTICS
+  // ===========================================================================
   let summary = $state({
     total_donasi: 0,
     total_transaksi: 0,
@@ -55,67 +50,33 @@
     trend_rata_rata: 0,
   });
 
-  const trendText = $derived(
-    startDate === endDate ? "dari kemarin" : "vs periode sebelumnya"
-  );
-
-  // Helper untuk mengubah angka desimal tren menjadi teks (misal: 5.2 -> "+5.2%")
-  function formatTrend(val: number) {
-    const isPositive = val >= 0;
-    return `${isPositive ? '+' : ''}${val}%`;
-  }
-
+  // ===========================================================================
+  // --- 5. STATE: FILTERS & OPTIONS
+  // ===========================================================================
+  let startDate = $state(todayStr);
+  let endDate = $state(todayStr);
+  let searchValue = $state("");
+  let selectedStatus = $state("");
+  
   let selectedPrograms = $state<string[]>([]);
   let selectedRekenings = $state<string[]>([]);
-  let selectedSumbers = $state<string[]>([]); // Tambahan untuk sumber
+  let selectedSumbers = $state<string[]>([]);
 
-  // [BARU] State untuk opsi Dropdown API
-  let programOptions = $state<{label: string, value: string}[]>([]);
-  let rekeningOptions = $state<{label: string, value: string}[]>([]);
-  let sumberOptions = $state<{label: string, value: string}[]>([]);
+  let programOptions = $state<{ label: string; value: string }[]>([]);
+  let rekeningOptions = $state<{ label: string; value: string }[]>([]);
+  let sumberOptions = $state<{ label: string; value: string }[]>([]);
 
-  // (Biarkan const statuses tetap statis karena nilainya baku)
+  let selectedNominalOperator = $state("");
+  let nominalValue = $state<number | null>(null);
+  let nominalFrom = $state<number | null>(null);
+  let nominalTo = $state<number | null>(null);
+
+  // Constants Baku
   const statuses = [
     { label: "Semua Status", value: "" },
     { label: "Berhasil", value: "success" },
     { label: "Duplikat", value: "duplicate" },
   ];
-
-  // --- FUNGSI AMBIL MASTER DATA FILTER ---
-  async function fetchMasterData() {
-    try {
-      const [progRes, rekRes, sumberRes] = await Promise.all([
-        apiClient.get(API_ENDPOINTS.PROGRAM.LIST),
-        apiClient.get(API_ENDPOINTS.REKENING.LIST),
-        apiClient.get(API_ENDPOINTS.SUMBER.LIST)
-      ]);
-      
-      programOptions = (progRes.data || []).map((item: any) => ({
-        label: item.nama_program,
-        value: item.id
-      }));
-      
-      rekeningOptions = (rekRes.data || []).map((item: any) => ({
-        label: `${item.alias} - ${item.nomor_rekening}`, 
-        value: item.id
-      }));
-      
-      sumberOptions = (sumberRes.data || []).map((item: any) => ({
-        label: item.sumber_transaksi,
-        value: item.id
-      }));
-    } catch (error) {
-      console.error("Gagal memuat master data filter:", error);
-      toastStore.error("Gagal memuat pilihan filter dari server.");
-    }
-  }
-
-  // Panggil sekali saat komponen dimuat
-  $effect(() => {
-    if (programOptions.length === 0) {
-      fetchMasterData();
-    }
-  });
 
   const nominalOperators = [
     { label: "Tanpa Filter", value: "" },
@@ -127,14 +88,26 @@
     { label: "Rentang", value: "between" },
   ];
 
-  const isNominalFilterActive = $derived(selectedNominalOperator === "between" ? nominalFrom !== null || nominalTo !== null : selectedNominalOperator !== "" && nominalValue !== null);
-
-  // --- STATE BULK ACTIONS & DELETE ---
+  // ===========================================================================
+  // --- 6. STATE: MODALS & UI ACTIONS
+  // ===========================================================================
   let showDeleteModal = $state(false);
   let selectedItemToDelete = $state<string | null>(null);
-  let isAppending = false;
 
-  // --- FUNGSI API GOLANG ---
+  // ===========================================================================
+  // --- 7. DERIVED STATE (COMPUTED VALUES)
+  // ===========================================================================
+  const trendText = $derived(startDate === endDate ? "dari kemarin" : "vs periode sebelumnya");
+  
+  const isNominalFilterActive = $derived(
+    selectedNominalOperator === "between" 
+      ? nominalFrom !== null || nominalTo !== null 
+      : selectedNominalOperator !== "" && nominalValue !== null
+  );
+
+  // ===========================================================================
+  // --- 8. API FETCHING & URL BUILDER
+  // ===========================================================================
   function buildQueryParams(isExport = false) {
     const params = new URLSearchParams();
 
@@ -147,18 +120,15 @@
     if (startDate) params.append("start_date", startDate);
     if (endDate) params.append("end_date", endDate);
 
-    // Konversi array multi-select menjadi string pisah koma (misal: "Wakaf Sumur,Infaq Umum")
-    if (selectedPrograms.length > 0) params.append("program", selectedPrograms.join(","));
-    if (selectedRekenings.length > 0) params.append("rekening", selectedRekenings.join(","));
-    if (selectedSumbers.length > 0) params.append("sumber", selectedSumbers.join(","));
+    if (selectedPrograms.length > 0) params.append("program_id", selectedPrograms.join(","));
+    if (selectedRekenings.length > 0) params.append("rekening_id", selectedRekenings.join(","));
+    if (selectedSumbers.length > 0) params.append("sumber_id", selectedSumbers.join(","));
     if (selectedStatus) params.append("status", selectedStatus);
 
     if (selectedNominalOperator === "between") {
       if (nominalFrom !== null) params.append("nominal_from", nominalFrom.toString());
       if (nominalTo !== null) params.append("nominal_to", nominalTo.toString());
-      if (nominalFrom !== null || nominalTo !== null) {
-        params.append("nominal_operator", "between");
-      }
+      if (nominalFrom !== null || nominalTo !== null) params.append("nominal_operator", "between");
     } else if (selectedNominalOperator && nominalValue !== null) {
       params.append("nominal_operator", selectedNominalOperator);
       params.append("nominal_value", nominalValue.toString());
@@ -167,13 +137,29 @@
     return params.toString();
   }
 
+  async function fetchMasterData() {
+    try {
+      const [progRes, rekRes, sumberRes] = await Promise.all([
+        apiClient.get(API_ENDPOINTS.PROGRAM.LIST), 
+        apiClient.get(API_ENDPOINTS.REKENING.LIST), 
+        apiClient.get(API_ENDPOINTS.SUMBER.LIST)
+      ]);
+
+      programOptions = (progRes.data || []).map((item: any) => ({ label: item.nama_program, value: item.id }));
+      rekeningOptions = (rekRes.data || []).map((item: any) => ({ label: `${item.alias} - ${item.nomor_rekening}`, value: item.id }));
+      sumberOptions = (sumberRes.data || []).map((item: any) => ({ label: item.sumber_transaksi, value: item.id }));
+    } catch (error) {
+      console.error("Gagal memuat master data filter:", error);
+      toastStore.error("Gagal memuat pilihan filter dari server.");
+    }
+  }
+
   async function fetchTransactions(append = false) {
     isLoading = true;
     try {
       const qs = buildQueryParams();
       const response = await apiClient.get(`${API_ENDPOINTS.TRANSAKSI.LIST}?${qs}`);
 
-      // Jika Load More (append), gabungkan array. Jika bukan, timpa array.
       if (append) {
         transactions = [...transactions, ...(response.data || [])];
       } else {
@@ -190,10 +176,13 @@
     }
   }
 
+  // ===========================================================================
+  // --- 9. FILTER & LIST HANDLERS
+  // ===========================================================================
   function loadMore() {
     if (meta.page < meta.total_page) {
-      isAppending = true; // Nyalakan penanda nambah ke bawah
-      meta.page++; // Cukup naikkan halamannya, biarkan $effect yang bekerja
+      isAppending = true;
+      meta.page++;
     }
   }
 
@@ -206,7 +195,6 @@
     if (selectedNominalOperator === "between" && nominalFrom !== null && nominalTo !== null && nominalFrom > nominalTo) {
       [nominalFrom, nominalTo] = [nominalTo, nominalFrom];
     }
-
     handleFilterChange();
   }
 
@@ -221,22 +209,66 @@
     nominalTo = null;
   }
 
+  // ===========================================================================
+  // --- 10. EXPORT & DELETE ACTIONS
+  // ===========================================================================
   function handleExport() {
     const qs = buildQueryParams(true);
     window.location.href = `http://localhost:8080/api/transaksi/export?${qs}`;
   }
 
-  // 1. Debounce untuk Kotak Pencarian (BIARKAN)
+  function confirmDelete(id: string | null = null) {
+    selectedItemToDelete = id;
+    showDeleteModal = true;
+  }
+
+  function executeDelete() {
+    showDeleteModal = false;
+    toastStore.success(`Data transaksi berhasil dihapus dari sistem.`, "Terhapus");
+    selectedItemToDelete = null;
+    fetchTransactions();
+  }
+
+  // ===========================================================================
+  // --- 11. UI FORMATTING HELPERS
+  // ===========================================================================
+  const statusLabels: Record<string, string> = {
+    success: "Berhasil",
+    duplicate: "Duplikat",
+  };
+
+  const getBadgeVariant = (status: string) => {
+    switch (status) {
+      case "success": return "success";
+      case "duplicate": return "warning";
+      default: return "secondary";
+    }
+  };
+
+  function formatDate(isoString: string) {
+    if (!isoString) return "-";
+    const date = new Date(isoString);
+    return new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric" }).format(date);
+  }
+
+  // ===========================================================================
+  // --- 12. REACTIVE EFFECTS ($effect)
+  // ===========================================================================
+  
+  // Fetch Dropdown Options on Mount
+  $effect(() => {
+    if (programOptions.length === 0) fetchMasterData();
+  });
+
+  // Debounce Search
   let searchTimeout: ReturnType<typeof setTimeout>;
   $effect(() => {
     const query = searchValue;
     clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      handleFilterChange();
-    }, 500);
+    searchTimeout = setTimeout(() => { handleFilterChange(); }, 500);
   });
 
-  // 2. Auto-Apply saat DateRangePicker di-klik "Terapkan" (BIARKAN)
+  // Auto-apply Date Range
   let prevStart = todayStr;
   let prevEnd = todayStr;
   $effect(() => {
@@ -247,77 +279,28 @@
     }
   });
 
-  // 3. Auto-Fetch saat Halaman atau Limit ditekan
+  // Pagination & Limit Change Handler
   let prevPage = 1;
   let prevLimit = 5;
-
   $effect(() => {
     let shouldFetch = false;
 
-    // Jika user mengubah dropdown limit (misal dari 5 ke 10)
     if (meta.limit !== prevLimit) {
       prevLimit = meta.limit;
       meta.page = 1;
       prevPage = 1;
       shouldFetch = true;
-      isAppending = false; // Pastikan kalau limit berubah, datanya ditimpa (replace)
-    }
-    // Jika user mengeklik tombol prev/next page atau Load More
-    else if (meta.page !== prevPage) {
+      isAppending = false;
+    } else if (meta.page !== prevPage) {
       prevPage = meta.page;
       shouldFetch = true;
     }
 
     if (shouldFetch) {
-      fetchTransactions(isAppending); // Kirim status append-nya ke sini
-      isAppending = false; // [PENTING] Langsung reset ke false agar klik dari desktop pagination tetap me-replace data
+      fetchTransactions(isAppending);
+      isAppending = false;
     }
   });
-
-  // --- FUNGSI UI (CENTANG & MODAL) ---
-
-  function confirmDelete(id: string | null = null) {
-    selectedItemToDelete = id; // Jika null, berarti hapus massal (Bulk Delete)
-    showDeleteModal = true;
-  }
-
-  function executeDelete() {
-    showDeleteModal = false;
-    const isBulk = selectedItemToDelete === null;
-
-    toastStore.success(`Data transaksi berhasil dihapus dari sistem.`, "Terhapus");
-
-    selectedItemToDelete = null;
-    fetchTransactions(); // Panggil API lagi untuk refresh tabel
-  }
-
-  // Helper UI
-  // [DIUBAH] Ubah menjadi map yang mengembalikan nama variant Badge
-  const getBadgeVariant = (status: string) => {
-    switch (status) {
-      case "success":
-        return "success";
-      case "duplicate":
-        return "warning";
-      default:
-        return "secondary";
-    }
-  };
-
-  const statusLabels: Record<string, string> = {
-    success: "Berhasil",
-    duplicate: "Duplikat",
-  };
-
-  function formatDate(isoString: string) {
-    if (!isoString) return "-";
-    const date = new Date(isoString);
-    return new Intl.DateTimeFormat("id-ID", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(date);
-  }
 </script>
 
 <div class="max-w-full mx-auto flex flex-col gap-4 md:gap-6">
@@ -461,9 +444,9 @@
                 </TableCell>
                 <TableCell>
                   <div class="flex flex-col gap-0.5">
-                    <span class="font-semibold text-sm leading-none text-gray-900">{trx.program || "-"}</span>
+                    <span class="font-semibold text-sm leading-none text-gray-900">{trx.program?.nama_program || "-"}</span>
                     <span class="text-[10px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded w-max mt-0.5">
-                      {trx.sumber || "-"}
+                      {trx.sumber?.sumber_transaksi || "-"}
                     </span>
                   </div>
                 </TableCell>
@@ -500,7 +483,7 @@
 
       <div class="md:hidden flex flex-col bg-gray-50/30 gap-3">
         {#each transactions as trx (trx.id)}
-          <SimpleTableCard name={trx.donatur?.nama_donatur || "Hamba Allah"} phone={trx.donatur?.nomor_hp_donatur || "-"} program={trx.program} date={formatDate(trx.tanggal_transaksi)} amount={formatNumber(trx.nominal, "standard")} statusLabel={statusLabels[trx.status] || trx.status} statusVariant={getBadgeVariant(trx.status)} />
+          <SimpleTableCard name={trx.donatur?.nama_donatur || "Hamba Allah"} phone={trx.donatur?.nomor_hp_donatur || "-"} program={trx.program?.nama_program || "-"} date={formatDate(trx.tanggal_transaksi)} amount={formatNumber(trx.nominal, "standard")} statusLabel={statusLabels[trx.status] || trx.status} statusVariant={getBadgeVariant(trx.status)} />
         {:else}
           <div class="py-10 flex justify-center text-center text-sm text-gray-500 border border-dashed rounded-lg">
             {#if isLoading}
