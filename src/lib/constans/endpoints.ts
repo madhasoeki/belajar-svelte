@@ -37,5 +37,20 @@ export const API_ENDPOINTS = {
     UPDATE: "/cabang",
     LIST: "/cabang",
     DELETE: "/cabang",
+  },
+  TIM: {
+    CREATE: "/tim",
+    UPDATE: "/tim",
+    LIST: "/tim",
+    DELETE: "/tim",
+  },
+  USER: {
+    CREATE: "/user",
+    UPDATE: "/user",
+    LIST: "/user",
+    DELETE: "/user",
+  },
+  ROLE: {
+    LIST: "/role",
   }
 } as const;

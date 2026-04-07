@@ -6,11 +6,6 @@ import {
   Settings,
   HelpCircle,
   Layers,
-  MousePointerClick,
-  TableProperties,
-  PanelTop,
-  Activity,
-  PieChart,
   HandCoins,
   Building
 } from "lucide-svelte";
@@ -54,6 +49,8 @@ export const appMenus = [
 
   // 3. MENU UTILITAS
   { id: "cabang", label: "Cabang", icon: Building, href: "/cabang" },
+  { id: "tim", label: "Tim", icon: Users, href: "/tim" },
+  { id: "user", label: "Users", icon: Users, href: "/user" },
   { id: "pengaturan", label: "Pengaturan", icon: Settings, href: "/pengaturan" },
   { id: "bantuan", label: "Bantuan", icon: HelpCircle, href: "/bantuan" },
 ];
