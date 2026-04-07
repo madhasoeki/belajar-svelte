@@ -31,5 +31,10 @@ export const API_ENDPOINTS = {
   },
   PROGRAM: {
     LIST: "/program",
+  },
+  CABANG: {
+    CREATE: "/cabang",
+    LIST: "/cabang",
+    DELETE: "/cabang",
   }
 } as const;

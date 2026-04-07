@@ -1,28 +1,29 @@
-import { 
-  LayoutDashboard, 
-  Receipt, 
-  Users, 
-  Box, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Receipt,
+  Users,
+  Box,
+  Settings,
   HelpCircle,
-  Layers, 
+  Layers,
   MousePointerClick,
   TableProperties,
   PanelTop,
   Activity,
   PieChart,
-  HandCoins
+  HandCoins,
+  Building
 } from "lucide-svelte";
 
 export const appMenus = [
   // 1. MENU BISNIS UTAMA
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-  { id: "input-donasi", label: "Input Donasi", icon: HandCoins, href: "/input-donasi", main:true },
+  { id: "input-donasi", label: "Input Donasi", icon: HandCoins, href: "/input-donasi", main: true },
   { id: "transaksi", label: "Transaksi", icon: Receipt, href: "/transaksi" },
   { id: "donatur", label: "Donatur", icon: Users, href: "/donatur" },
-  { 
-    id: "gudang", 
-    label: "Gudang", 
+  {
+    id: "gudang",
+    label: "Gudang",
     icon: Box,
     children: [
       { id: "stok-barang", label: "Stok Barang", href: "/gudang/stok" },
@@ -52,6 +53,7 @@ export const appMenus = [
   },
 
   // 3. MENU UTILITAS
+  { id: "cabang", label: "Cabang", icon: Building, href: "/cabang" },
   { id: "pengaturan", label: "Pengaturan", icon: Settings, href: "/pengaturan" },
   { id: "bantuan", label: "Bantuan", icon: HelpCircle, href: "/bantuan" },
 ];
