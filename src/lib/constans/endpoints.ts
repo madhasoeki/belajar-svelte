@@ -34,6 +34,7 @@ export const API_ENDPOINTS = {
   },
   CABANG: {
     CREATE: "/cabang",
+    UPDATE: "/cabang",
     LIST: "/cabang",
     DELETE: "/cabang",
   }

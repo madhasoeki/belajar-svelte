@@ -98,7 +98,34 @@ export const apiClient = {
     }
   },
 
-  // 4. Fungsi DELETE (Untuk Menghapus Data)
+  // 4. Fungsi PUT (Untuk Update Data Utuh)
+  async put(endpoint: string, data: any) {
+    try {
+      const response = await fetch(`${PUBLIC_API_URL}${endpoint}`, {
+        method: "PUT",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+
+        if (response.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login") {
+          localStorage.removeItem("admin_token");
+          window.location.href = "/login";
+        }
+
+        throw new Error(errorData?.pesan || errorData?.message || `Terjadi kesalahan: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`[API Error] PUT ${endpoint}:`, error);
+      throw error;
+    }
+  },
+
+  // 5. Fungsi DELETE (Untuk Menghapus Data)
   async delete(endpoint: string, data?: any) {
     try {
       const options: RequestInit = {
