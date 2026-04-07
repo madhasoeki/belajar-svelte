@@ -14,6 +14,7 @@
   
   import { toastStore } from "$lib/stores/toast.svelte";
   import { formatNumber, formatTrend } from "$lib/utils/formatter";
+  import { debounce } from "$lib/utils/helpers";
   import { apiClient } from "$lib/utils/api";
   import { API_ENDPOINTS } from "$lib/constans/endpoints";
   
@@ -85,9 +86,6 @@
   // ===========================================================================
   // --- 5. STATE: INLINE EDIT LABEL & UI MODALS
   // ===========================================================================
-  let showDeleteModal = $state(false);
-  let selectedItemToDelete = $state<string | null>(null);
-
   let editingLabelId = $state<string | null>(null);
   let inlineTags = $state<string[]>([]);
   let inlineInputValue = $state("");
@@ -223,19 +221,7 @@
 
   function handleExport() {
     const qs = buildQueryParams(true);
-    window.location.href = `http://localhost:8080/api/donatur/export?${qs}`;
-  }
-
-  function confirmDelete(id: string | null = null) {
-    selectedItemToDelete = id;
-    showDeleteModal = true;
-  }
-
-  function executeDelete() {
-    showDeleteModal = false;
-    toastStore.success(`Data donatur berhasil dihapus dari sistem.`, "Terhapus");
-    selectedItemToDelete = null;
-    fetchDonaturs();
+    window.location.href = `${API_ENDPOINTS.DONATUR.EXPORT}?${qs}`;
   }
 
   // ===========================================================================
@@ -329,11 +315,12 @@
   });
 
   // Debounce Search Filter
-  let searchTimeout: ReturnType<typeof setTimeout>;
+  const applySearch = debounce(() => handleFilterChange(), 500);
+
+  // SEKARANG: Effect-nya jadi sangat elegan
   $effect(() => {
-    const query = searchValue;
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => { handleFilterChange(); }, 500);
+    searchValue; // Memancing reaktivitas
+    applySearch(); 
   });
 
   // Auto-apply Date Filter
@@ -378,7 +365,7 @@
     <div class="hidden md:grid lg:grid-cols-4 md:gap-4 lg:gap-6 w-full">
       <SummaryCard
         label="Total Donatur"
-        value={formatNumber(summary.total_donatur, "standard")}
+        value={summary.total_donatur}
         icon={Users}
         trend={summary.trend_total_donatur > 0 ? "up" : summary.trend_total_donatur < 0 ? "down" : null}
         trendValue={summary.trend_total_donatur !== 0 ? `${formatTrend(summary.trend_total_donatur)} ${trendText}` : undefined}
@@ -416,7 +403,7 @@
     <div class="block md:hidden w-full">
       <MobileOverviewCard
         title="Total Donatur"
-        value={formatNumber(summary.total_donatur, "standard")}
+        value={summary.total_donatur}
         icon={Users}
         metrics={[
           {
@@ -618,8 +605,6 @@
                     {/snippet}
                     <DropdownItem icon={Eye} onclick={() => console.log("Detail", dnt.id)}>Lihat Detail</DropdownItem>
                     <DropdownItem icon={Edit} onclick={() => console.log("Edit", dnt.id)}>Ubah Data</DropdownItem>
-                    <div class="border-t border-(--color-border) my-1"></div>
-                    <DropdownItem icon={Trash2} variant="danger" onclick={() => confirmDelete(dnt.id)}>Hapus</DropdownItem>
                   </Dropdown>
                 </TableCell>
               </TableRow>
@@ -767,17 +752,3 @@
     </CardFooter>
   </Card>
 </div>
-
-<Modal bind:open={showDeleteModal} size="sm">
-  <div class="flex flex-col items-center text-center pt-4 pb-2">
-    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
-      <TriangleAlert size={24} strokeWidth={2} />
-    </div>
-    <h3 class="text-lg font-bold text-gray-900 mb-2">Hapus Donatur?</h3>
-    <p class="text-sm text-gray-500">Semua data riwayat donasi juga mungkin akan terpengaruh. Lanjutkan?</p>
-  </div>
-  {#snippet footer()}
-    <Button variant="outline" class="w-full" onclick={() => (showDeleteModal = false)}>Batal</Button>
-    <Button variant="danger" class="w-full" onclick={executeDelete}>Ya, Hapus Data</Button>
-  {/snippet}
-</Modal>

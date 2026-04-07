@@ -11,6 +11,7 @@ export const API_ENDPOINTS = {
   TRANSAKSI: {
     LIST: "/transaksi",
     EXPORT: "/transaksi/export",
+    DELETE: "/transaksi",
   },
   LABEL: {
     LIST: "/labels",

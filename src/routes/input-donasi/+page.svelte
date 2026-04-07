@@ -9,6 +9,7 @@
   
   import { toastStore } from "$lib/stores/toast.svelte";
   import { formatNumber } from "$lib/utils/formatter";
+  import { getMasterDropdownOptions } from "$lib/utils/helpers";
   import { getLocalDateString } from "$lib/utils/date";
   import { apiClient } from "$lib/utils/api";
   import { API_ENDPOINTS } from "$lib/constans/endpoints";
@@ -45,6 +46,17 @@
   let rekenings = $state<{label: string, value: string}[]>([]);
   let sumber = $state<{label: string, value: string}[]>([]);
 
+  $effect(() => {
+    if (programs.length === 0) {
+      // Langsung panggil utilitasnya dan pecah (destructure) hasilnya
+      getMasterDropdownOptions().then((res) => {
+        programs = res.programs;
+        rekenings = res.rekenings;
+        sumber = res.sumbers;
+      });
+    }
+  });
+
   // ===========================================================================
   // --- 6. STATE: UI STATUS
   // ===========================================================================
@@ -70,37 +82,6 @@
     rawAmount > 0 && 
     donationDate !== ""
   );
-
-  // ===========================================================================
-  // --- 8. API FETCHING
-  // ===========================================================================
-  async function fetchMasterData() {
-    try {
-      const [progRes, rekRes, sumberRes] = await Promise.all([
-        apiClient.get(API_ENDPOINTS.PROGRAM.LIST),
-        apiClient.get(API_ENDPOINTS.REKENING.LIST),
-        apiClient.get(API_ENDPOINTS.SUMBER.LIST)
-      ]);
-      
-      programs = (progRes.data || []).map((item: any) => ({
-        label: item.nama_program,
-        value: item.id
-      }));
-      
-      rekenings = (rekRes.data || []).map((item: any) => ({
-        label: `${item.alias} - ${item.nomor_rekening}`, 
-        value: item.id
-      }));
-      
-      sumber = (sumberRes.data || []).map((item: any) => ({
-        label: item.sumber_transaksi,
-        value: item.id
-      }));
-    } catch (error) {
-      console.error("Gagal memuat master data program/rekening/sumber:", error);
-      toastStore.error("Gagal memuat pilihan formulir dari server.");
-    }
-  }
 
   // ===========================================================================
   // --- 9. FORM HANDLERS
@@ -194,10 +175,6 @@
       donaturId = "";
     }
 
-    // Ambil master data hanya jika opsi masih kosong
-    if (programs.length === 0 && rekenings.length === 0) {
-      fetchMasterData();
-    }
   });
 </script>
 

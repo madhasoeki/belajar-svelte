@@ -14,8 +14,10 @@
   
   import { toastStore } from "$lib/stores/toast.svelte";
   import { formatNumber, formatTrend } from "$lib/utils/formatter";
+  import { getMasterDropdownOptions, debounce } from "$lib/utils/helpers";
   import { apiClient } from "$lib/utils/api";
   import { API_ENDPOINTS } from "$lib/constans/endpoints";
+  import { goto } from "$app/navigation";
   
   import { Trash2, Eye, TriangleAlert, Download, ReceiptText, Ellipsis, CircleDollarSign, CreditCard, Users, Activity, Pencil } from "lucide-svelte";
 
@@ -137,23 +139,6 @@
     return params.toString();
   }
 
-  async function fetchMasterData() {
-    try {
-      const [progRes, rekRes, sumberRes] = await Promise.all([
-        apiClient.get(API_ENDPOINTS.PROGRAM.LIST), 
-        apiClient.get(API_ENDPOINTS.REKENING.LIST), 
-        apiClient.get(API_ENDPOINTS.SUMBER.LIST)
-      ]);
-
-      programOptions = (progRes.data || []).map((item: any) => ({ label: item.nama_program, value: item.id }));
-      rekeningOptions = (rekRes.data || []).map((item: any) => ({ label: `${item.alias} - ${item.nomor_rekening}`, value: item.id }));
-      sumberOptions = (sumberRes.data || []).map((item: any) => ({ label: item.sumber_transaksi, value: item.id }));
-    } catch (error) {
-      console.error("Gagal memuat master data filter:", error);
-      toastStore.error("Gagal memuat pilihan filter dari server.");
-    }
-  }
-
   async function fetchTransactions(append = false) {
     isLoading = true;
     try {
@@ -214,7 +199,7 @@
   // ===========================================================================
   function handleExport() {
     const qs = buildQueryParams(true);
-    window.location.href = `http://localhost:8080/api/transaksi/export?${qs}`;
+    window.location.href = `${API_ENDPOINTS.TRANSAKSI.EXPORT}?${qs}`;
   }
 
   function confirmDelete(id: string | null = null) {
@@ -222,11 +207,18 @@
     showDeleteModal = true;
   }
 
-  function executeDelete() {
+  async function executeDelete() { // [UPDATE] async ditaruh di sini
     showDeleteModal = false;
-    toastStore.success(`Data transaksi berhasil dihapus dari sistem.`, "Terhapus");
-    selectedItemToDelete = null;
-    fetchTransactions();
+    
+    try {
+      await apiClient.delete(`${API_ENDPOINTS.TRANSAKSI.DELETE}/${selectedItemToDelete}`);
+      toastStore.success(`Data transaksi berhasil dihapus dari sistem.`, "Terhapus");
+      selectedItemToDelete = null;
+      fetchTransactions();
+    } catch (error) {
+      toastStore.error("Gagal menghapus transaksi dari sistem.");
+      console.error(error);
+    }
   }
 
   // ===========================================================================
@@ -257,15 +249,21 @@
   
   // Fetch Dropdown Options on Mount
   $effect(() => {
-    if (programOptions.length === 0) fetchMasterData();
+    if (programOptions.length === 0) {
+      getMasterDropdownOptions().then((res) => {
+        // [PERBAIKAN] Tembak ke variabel Options milik halaman Transaksi
+        programOptions = res.programs;
+        rekeningOptions = res.rekenings;
+        sumberOptions = res.sumbers;
+      });
+    }
   });
 
   // Debounce Search
-  let searchTimeout: ReturnType<typeof setTimeout>;
+  const applySearch = debounce(() => handleFilterChange(), 500);
   $effect(() => {
-    const query = searchValue;
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => { handleFilterChange(); }, 500);
+    searchValue; 
+    applySearch(); 
   });
 
   // Auto-apply Date Range
@@ -458,7 +456,7 @@
                       </Button>
                     {/snippet}
                     <DropdownItem icon={Eye} onclick={() => console.log("Detail", trx.id)}>Lihat Detail</DropdownItem>
-                    <DropdownItem icon={Pencil} onclick={() => console.log("Edit", trx.id)}>Ubah Data</DropdownItem>
+                    <DropdownItem icon={Pencil} onclick={() => goto(`/transaksi/edit/${trx.id}`)}>Ubah Data</DropdownItem>
                     <div class="border-t border-(--color-border) my-1"></div>
                     <DropdownItem icon={Trash2} variant="danger" onclick={() => confirmDelete(trx.id)}>Hapus</DropdownItem>
                   </Dropdown>

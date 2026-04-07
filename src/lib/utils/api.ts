@@ -73,4 +73,34 @@ export const apiClient = {
     }
   },
 
+  // 4. Fungsi DELETE (Untuk Menghapus Data)
+  async delete(endpoint: string, data?: any) {
+    try {
+      const options: RequestInit = {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          // "Authorization": `Bearer ${token}` 
+        }
+      };
+
+      // Jika ada payload data (misalnya untuk hapus massal / bulk delete)
+      if (data) {
+        options.body = JSON.stringify(data);
+      }
+
+      const response = await fetch(`${PUBLIC_API_URL}${endpoint}`, options);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Terjadi kesalahan: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`[API Error] DELETE ${endpoint}:`, error);
+      throw error;
+    }
+  },
+
 };
