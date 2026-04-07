@@ -5,6 +5,7 @@
   import DropdownItem from "$lib/components/ui/dropdown/DropdownItem.svelte";
   import { Bell, User, Settings, LogOut, Info } from "lucide-svelte";
   import { toastStore } from "$lib/stores/toast.svelte";
+    import { goto } from "$app/navigation";
 
   interface TopbarProps {
     title: string;
@@ -21,7 +22,15 @@
   const unreadCount = $derived(notifications.filter(n => !n.read).length);
 
   function handleLogout() {
-    toastStore.info("Memproses log out...", "Sistem");
+    // 1. Hapus token dari localStorage
+    localStorage.removeItem("admin_token");
+
+    // 2. Beri notifikasi singkat
+    toastStore.success("Berhasil keluar dari sistem.", "Logout");
+
+    // 3. Tendang ke halaman login
+    // Menggunakan goto agar perpindahan mulus tanpa reload full page
+    goto("/login");
   }
 </script>
 

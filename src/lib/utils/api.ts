@@ -1,22 +1,41 @@
 import { PUBLIC_API_URL } from "$env/static/public";
 
+const getAuthHeaders = () => {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  // Pastikan kode ini berjalan di browser (window terdefinisi), bukan di server Svelte
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("admin_token");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
+
+  return headers;
+};
+
 export const apiClient = {
-  
+
   // 1. Fungsi POST (Untuk Insert Data)
   async post(endpoint: string, data: any) {
     try {
       const response = await fetch(`${PUBLIC_API_URL}${endpoint}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // "Authorization": `Bearer ${token}` 
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `Terjadi kesalahan: ${response.status}`);
+
+        if (response.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login") {
+          localStorage.removeItem("admin_token");
+          window.location.href = "/login";
+        }
+
+        throw new Error(errorData?.pesan || errorData?.message || `Terjadi kesalahan: ${response.status}`);
       }
 
       return await response.json();
@@ -31,15 +50,18 @@ export const apiClient = {
     try {
       const response = await fetch(`${PUBLIC_API_URL}${endpoint}`, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          // "Authorization": `Bearer ${token}` 
-        }
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `Terjadi kesalahan: ${response.status}`);
+
+        if (response.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login") {
+          localStorage.removeItem("admin_token");
+          window.location.href = "/login";
+        }
+
+        throw new Error(errorData?.pesan || errorData?.message || `Terjadi kesalahan: ${response.status}`);
       }
 
       return await response.json();
@@ -49,21 +71,24 @@ export const apiClient = {
     }
   },
 
-// 3. Fungsi PATCH (Untuk Update Sebagian Data)
+  // 3. Fungsi PATCH (Untuk Update Sebagian Data)
   async patch(endpoint: string, data: any) {
     try {
       const response = await fetch(`${PUBLIC_API_URL}${endpoint}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          // "Authorization": `Bearer ${token}` 
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `Terjadi kesalahan: ${response.status}`);
+
+        if (response.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login") {
+          localStorage.removeItem("admin_token");
+          window.location.href = "/login";
+        }
+
+        throw new Error(errorData?.pesan || errorData?.message || `Terjadi kesalahan: ${response.status}`);
       }
 
       return await response.json();
@@ -78,10 +103,7 @@ export const apiClient = {
     try {
       const options: RequestInit = {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          // "Authorization": `Bearer ${token}` 
-        }
+        headers: getAuthHeaders(),
       };
 
       // Jika ada payload data (misalnya untuk hapus massal / bulk delete)
@@ -93,7 +115,13 @@ export const apiClient = {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `Terjadi kesalahan: ${response.status}`);
+
+        if (response.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login") {
+          localStorage.removeItem("admin_token");
+          window.location.href = "/login";
+        }
+
+        throw new Error(errorData?.pesan || errorData?.message || `Terjadi kesalahan: ${response.status}`);
       }
 
       return await response.json();
