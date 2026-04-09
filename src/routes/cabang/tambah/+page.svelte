@@ -23,9 +23,9 @@
     try {
       await apiClient.post(API_ENDPOINTS.CABANG.CREATE, {
         nama_cabang,
-        alamat
+        alamat,
       });
-      
+
       toastStore.success("Data cabang baru berhasil disimpan.", "Berhasil");
       goto("/cabang"); // Kembali ke tabel
     } catch (error: any) {
@@ -36,33 +36,14 @@
   }
 </script>
 
-<div class="max-w-2xl mx-auto flex flex-col gap-6 w-full pb-20 md:pb-6">
-  <div class="flex items-center gap-4">
-    <Button variant="outline" size="sm" onclick={() => goto("/cabang")} class="px-2">
-      <ArrowLeft size={18} />
-    </Button>
-    <div>
-      <h1 class="text-xl font-bold text-gray-900">Tambah Cabang Baru</h1>
-      <p class="text-sm text-gray-500">Masukkan detail informasi cabang operasional.</p>
-    </div>
-  </div>
-
+<div class="max-w-full mx-auto flex flex-col gap-6 w-full pb-20 md:pb-6">
   <Card>
-    <CardContent class="pt-6">
+    <CardHeader title="Form Tambah Cabang" description="Pastikan semua data yang diperlukan sudah diisi dengan benar." icon={Building2} iconColor="text-(--color-primary)" />
+    <CardContent>
       <form onsubmit={handleSubmit} class="flex flex-col gap-5">
-        <Input 
-          label="Nama Cabang *" 
-          placeholder="Contoh: Cabang Jakarta Selatan" 
-          iconLeft={Building2}
-          bind:value={nama_cabang} 
-        />
-        
-        <Input 
-          label="Alamat *" 
-          placeholder="Contoh: Jl. Merdeka No. 123" 
-          iconLeft={MapPin}
-          bind:value={alamat} 
-        />
+        <Input label="Nama Cabang *" placeholder="Contoh: Cabang Jakarta Selatan" iconLeft={Building2} bind:value={nama_cabang} />
+
+        <Input label="Alamat *" placeholder="Contoh: Jl. Merdeka No. 123" iconLeft={MapPin} bind:value={alamat} />
 
         <div class="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-100">
           <Button type="button" variant="ghost" onclick={() => goto("/cabang")}>Batal</Button>

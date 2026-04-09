@@ -1,35 +1,63 @@
 <script lang="ts">
-  import { Card, CardHeader, CardContent, SimpleTableCard, CardFooter, MobileOverviewCard, SummaryCard } from "$lib/components/ui/card";
+  import { Card, CardHeader, CardContent, CardFooter, MobileOverviewCard, EntityCard } from "$lib/components/ui/card";
   import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableToolbar } from "$lib/components/ui/table";
+  import { Select } from "$lib/components/ui/forms";
   import Pagination from "$lib/components/ui/pagination/Pagination.svelte";
   import Button from "$lib/components/ui/button/Button.svelte";
   import Modal from "$lib/components/ui/modal/Modal.svelte";
   import LoadingBars from "$lib/components/ui/loading/LoadingBars.svelte";
-  import Dropdown from "$lib/components/ui/dropdown/Dropdown.svelte";
-  import DropdownItem from "$lib/components/ui/dropdown/DropdownItem.svelte";
-  
+  import ToggleSwitch from "$lib/components/ui/forms/ToggleSwitch.svelte"; 
+
   import { toastStore } from "$lib/stores/toast.svelte";
   import { debounce } from "$lib/utils/helpers";
   import { apiClient } from "$lib/utils/api";
   import { API_ENDPOINTS } from "$lib/constans/endpoints";
-  
-  import { Trash2, Eye, Pencil, Users, Building2, Layers, CreditCard, Ellipsis } from "lucide-svelte";
+
+  import { Trash2, Eye, Pencil, Users, User, Building2, Layers, CreditCard, Ellipsis, Plus } from "lucide-svelte";
   import { goto } from "$app/navigation";
+  import { Dropdown, DropdownItem } from "$lib/components/ui/dropdown";
 
   let tims = $state<any[]>([]);
   let meta = $state({ page: 1, limit: 10, total_page: 1, total_data: 0 });
   let isLoading = $state(true);
   let isAppending = $state(false);
+
+  let togglingIds = $state<Set<string>>(new Set());
+
   let searchValue = $state("");
+  let selectedStatus = $state("");
+  let selectedCabang = $state(""); 
+
+  // [UPDATE]: Value diubah jadi "nonaktif" sesuai kontrak API
+  const statusOptions = [
+    { label: "Aktif", value: "aktif" },
+    { label: "Tidak Aktif", value: "nonaktif" },
+  ];
+
+  let cabangOptions = $state<{label: string, value: string}[]>([]); 
 
   let showDeleteModal = $state(false);
   let selectedItemToDelete = $state<string | null>(null);
+
+  $effect(() => {
+    async function fetchCabangMaster() {
+      try {
+        const res = await apiClient.get(API_ENDPOINTS.CABANG.LIST);
+        cabangOptions = (res.data || []).map((c: any) => ({ label: c.nama_cabang, value: c.id }));
+      } catch (error) {
+        console.error("Gagal memuat opsi cabang untuk filter.");
+      }
+    }
+    if (cabangOptions.length === 0) fetchCabangMaster();
+  });
 
   function buildQueryParams() {
     const params = new URLSearchParams();
     params.append("page", meta.page.toString());
     params.append("limit", meta.limit.toString());
     if (searchValue) params.append("q", searchValue);
+    if (selectedStatus) params.append("status", selectedStatus); 
+    if (selectedCabang) params.append("cabang_id", selectedCabang); 
     return params.toString();
   }
 
@@ -63,6 +91,39 @@
   function handleFilterChange() {
     meta.page = 1;
     fetchTims();
+  }
+
+  function resetFilters() {
+    selectedStatus = "";
+    selectedCabang = ""; 
+    handleFilterChange();
+  }
+
+  function applyModalFilter() {
+    handleFilterChange();
+  }
+
+  // [UPDATE]: Menyesuaikan Endpoint PATCH dan value nonaktif
+  async function handleToggleStatus(tim: any, newChecked: boolean) {
+    const newStatus = newChecked ? "aktif" : "nonaktif";
+
+    togglingIds.add(tim.id);
+    togglingIds = new Set(togglingIds);
+
+    try {
+      // Endpoint ditambah /status di ujungnya
+      await apiClient.patch(`${API_ENDPOINTS.TIM.UPDATE}/${tim.id}/status`, {
+        status: newStatus,
+      });
+
+      tim.status = newStatus;
+      toastStore.success(`Tim ${tim.nama_tim} kini ${newStatus}.`);
+    } catch (error) {
+      toastStore.error("Gagal mengubah status operasional tim.");
+    } finally {
+      togglingIds.delete(tim.id);
+      togglingIds = new Set(togglingIds);
+    }
   }
 
   function confirmDelete(id: string) {
@@ -107,22 +168,37 @@
 </script>
 
 <div class="max-w-full mx-auto flex flex-col gap-4 md:gap-6">
-  
-  <div class="w-full min-w-0">
-    <div class="hidden md:grid lg:grid-cols-2 md:gap-4 lg:gap-6 w-full">
-      <SummaryCard label="Total Tim Aktif" value={meta.total_data} icon={Users} variant="primary" />
-    </div>
-  </div>
 
   <Card>
     <CardHeader title="Manajemen Tim" description="Kelola tim operasional, afiliasi cabang, dan hak akses program/rekening." icon={Users} iconColor="text-(--color-primary)" />
     <CardContent class="pb-3">
       
-      <TableToolbar bind:searchValue searchPlaceholder="Cari nama tim..." class="mb-4 flex flex-row gap-3 items-center justify-between" searchWrapperClass="w-full md:w-1/2" searchInputClass="w-full">
+      <TableToolbar 
+        bind:searchValue 
+        searchPlaceholder="Cari nama tim..." 
+        class="mb-4 flex flex-row gap-3 items-start md:items-center justify-between" 
+        searchWrapperClass="flex-1" 
+        actionsClass="flex items-center gap-2 shrink-0" 
+        filterLabelClass="hidden sm:inline" 
+        filterActive={!!selectedStatus || !!selectedCabang} 
+        onResetFilter={resetFilters} 
+        onApplyFilter={applyModalFilter}
+      >
         {#snippet extraActions()}
-          <Button variant="primary" onclick={() => goto("/tim/tambah")} class="flex items-center gap-2">
-            <span class="hidden sm:inline">Tambah Tim</span>
+          <Button variant="primary" onclick={() => goto("/tim/tambah")} class="whitespace-nowrap">
+            <Plus size={16} /> <span class="hidden sm:inline">Tambah Tim</span>
           </Button>
+        {/snippet}
+
+        {#snippet filterContent()}
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+              <Select label="Status Operasional" options={statusOptions} bind:value={selectedStatus} placeholder="Semua Status" />
+            </div>
+            <div class="flex flex-col gap-2">
+              <Select label="Filter Cabang" options={cabangOptions} bind:value={selectedCabang} placeholder="Semua Cabang" searchable={true} />
+            </div>
+          </div>
         {/snippet}
       </TableToolbar>
 
@@ -133,6 +209,8 @@
               <TableHead>Nama Tim</TableHead>
               <TableHead>Cabang Induk</TableHead>
               <TableHead>Akses Modul</TableHead>
+              <TableHead>Jumlah User</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead class="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
@@ -159,6 +237,25 @@
                     </div>
                   </div>
                 </TableCell>
+                <TableCell>
+                  <div class="flex items-center gap-1.5 text-gray-600">
+                    <User size={16} />
+                    <span class="font-bold text-sm text-gray-900">{tim.user_count || 0} User</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div class="flex items-center gap-2">
+                    <ToggleSwitch 
+                      size="sm" 
+                      checked={tim.status?.toLowerCase() === "aktif"} 
+                      isLoading={togglingIds.has(tim.id)} 
+                      onchange={(newChecked) => handleToggleStatus(tim, newChecked)} 
+                    />
+                    <span class={`text-xs font-semibold uppercase tracking-wide ${tim.status?.toLowerCase() === "aktif" ? "text-emerald-600" : "text-gray-400"}`}>
+                      {tim.status === "aktif" ? "Aktif" : "Nonaktif"}
+                    </span>
+                  </div>
+                </TableCell>
                 <TableCell class="text-right">
                   <Dropdown width="w-36" align="right">
                     {#snippet trigger()}
@@ -166,7 +263,6 @@
                         <Ellipsis size={20} />
                       </Button>
                     {/snippet}
-                    <DropdownItem icon={Eye} onclick={() => console.log("Detail", tim.id)}>Lihat Detail</DropdownItem>
                     <DropdownItem icon={Pencil} onclick={() => goto(`/tim/edit/${tim.id}`)}>Ubah Data</DropdownItem>
                     <div class="border-t border-(--color-border) my-1"></div>
                     <DropdownItem icon={Trash2} variant="danger" onclick={() => confirmDelete(tim.id)}>Hapus</DropdownItem>
@@ -175,7 +271,7 @@
               </TableRow>
             {:else}
               <TableRow>
-                <TableCell colspan={4} class="h-40 text-center text-gray-500">
+                <TableCell colspan={6} class="h-40 text-center text-gray-500">
                   {#if isLoading}
                     <LoadingBars size={50} class="text-(--color-primary)" />
                   {:else}
@@ -190,18 +286,54 @@
 
       <div class="md:hidden flex flex-col bg-gray-50/30 gap-3">
         {#each tims as tim (tim.id)}
-          <SimpleTableCard 
-            name={tim.nama_tim} 
-            program={tim.cabang?.nama_cabang || "-"} 
-            amount={`${tim.programs?.length || 0} Program`} 
-            amountPrefix="" 
-          />
+          <EntityCard
+            title={tim.nama_tim}
+            subtitle={tim.cabang?.nama_cabang || "-"}
+            titleIcon={Users}
+            metrics={[
+              { label: "Program", value: `${tim.programs?.length || 0}`, icon: Layers },
+              { label: "Rekening", value: `${tim.rekenings?.length || 0}`, icon: CreditCard },
+              { label: "User", value: `${tim.user_count || 0}`, icon: User } 
+            ]}
+            hasToggle={true}
+            statusLabel={tim.status === "aktif" ? "Aktif" : "Nonaktif"}
+            isToggling={togglingIds.has(tim.id)}
+            onToggle={(newChecked) => handleToggleStatus(tim, newChecked)}
+          >
+            {#snippet actions()}
+              <Dropdown width="w-32" align="right">
+                {#snippet trigger()}
+                  <button class="text-gray-400 hover:text-gray-700 p-1"><Ellipsis size={18} /></button>
+                {/snippet}
+                <DropdownItem icon={Pencil} onclick={() => goto(`/tim/edit/${tim.id}`)}>Edit</DropdownItem>
+                <div class="border-t border-(--color-border) my-1"></div>
+                <DropdownItem icon={Trash2} variant="danger" onclick={() => confirmDelete(tim.id)}>Hapus</DropdownItem>
+              </Dropdown>
+            {/snippet}
+          </EntityCard>
+        {:else}
+          <div class="py-10 flex justify-center text-center text-sm text-gray-500 border border-dashed rounded-lg">
+            {#if isLoading}
+              <LoadingBars size={35} class="text-(--color-primary)" />
+            {:else}
+              Tidak ada data tim yang ditemukan.
+            {/if}
+          </div>
         {/each}
       </div>
     </CardContent>
 
     <CardFooter class="p-3! md:px-6!">
       {#if tims.length > 0}
+        <div class="md:hidden w-full">
+          {#if meta.page < meta.total_page}
+            <Button variant="outline" class="w-full py-2.5 text-sm" onclick={loadMore} disabled={isLoading}>
+              {isLoading ? "Memuat..." : "Tampilkan Lebih Banyak"}
+            </Button>
+          {:else}
+            <p class="text-center text-xs text-gray-400">Semua data telah ditampilkan</p>
+          {/if}
+        </div>
         <div class="hidden md:block w-full">
           <Pagination bind:currentPage={meta.page} bind:pageSize={meta.limit} totalPages={meta.total_page} totalData={meta.total_data} />
         </div>

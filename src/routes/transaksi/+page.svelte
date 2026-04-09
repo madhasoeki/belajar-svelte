@@ -21,6 +21,9 @@
   
   import { Trash2, Eye, TriangleAlert, Download, ReceiptText, Ellipsis, CircleDollarSign, CreditCard, Users, Activity, Pencil } from "lucide-svelte";
 
+  // [BARU] Import TanStack Query
+  import { createQuery } from '@tanstack/svelte-query';
+
   // ===========================================================================
   // --- 2. SETUP TANGGAL HARI INI
   // ===========================================================================
@@ -59,25 +62,40 @@
   let endDate = $state(todayStr);
   let searchValue = $state("");
   let selectedStatus = $state("");
+  let selectedScopeMode = $state(""); // [BARU] State untuk filter Scope
   
   let selectedPrograms = $state<string[]>([]);
   let selectedRekenings = $state<string[]>([]);
   let selectedSumbers = $state<string[]>([]);
-
-  let programOptions = $state<{ label: string; value: string }[]>([]);
-  let rekeningOptions = $state<{ label: string; value: string }[]>([]);
-  let sumberOptions = $state<{ label: string; value: string }[]>([]);
 
   let selectedNominalOperator = $state("");
   let nominalValue = $state<number | null>(null);
   let nominalFrom = $state<number | null>(null);
   let nominalTo = $state<number | null>(null);
 
-  // Constants Baku
+  // [UPDATE] Menggunakan TanStack Query untuk Mencegah Infinite Loop
+  const masterQuery = createQuery(() => ({
+    queryKey: ['masterDropdownOptions'],
+    queryFn: async () => await getMasterDropdownOptions(),
+  }));
+
+  const programOptions = $derived(masterQuery.data?.programs || []);
+  const rekeningOptions = $derived(masterQuery.data?.rekenings || []);
+  const sumberOptions = $derived(masterQuery.data?.sumbers || []);
+
+  // [UPDATE] Constants Baku sesuai Kontrak API Baru
   const statuses = [
     { label: "Semua Status", value: "" },
+    { label: "Pending", value: "pending" },
     { label: "Berhasil", value: "success" },
+    { label: "Gagal", value: "failed" },
     { label: "Duplikat", value: "duplicate" },
+  ];
+
+  const scopeOptions = [
+    { label: "Semua Akses", value: "" },
+    { label: "Transaksi Saya (Self)", value: "self" },
+    { label: "Transaksi Tim (Team)", value: "team" },
   ];
 
   const nominalOperators = [
@@ -121,6 +139,9 @@
     if (searchValue) params.append("q", searchValue);
     if (startDate) params.append("start_date", startDate);
     if (endDate) params.append("end_date", endDate);
+    
+    // [BARU] Kirim parameter Scope
+    if (selectedScopeMode) params.append("scope_mode", selectedScopeMode);
 
     if (selectedPrograms.length > 0) params.append("program_id", selectedPrograms.join(","));
     if (selectedRekenings.length > 0) params.append("rekening_id", selectedRekenings.join(","));
@@ -184,6 +205,7 @@
   }
 
   function resetFilters() {
+    selectedScopeMode = ""; // [BARU] Reset scope
     selectedPrograms = [];
     selectedRekenings = [];
     selectedSumbers = [];
@@ -207,7 +229,7 @@
     showDeleteModal = true;
   }
 
-  async function executeDelete() { // [UPDATE] async ditaruh di sini
+  async function executeDelete() {
     showDeleteModal = false;
     
     try {
@@ -224,15 +246,20 @@
   // ===========================================================================
   // --- 11. UI FORMATTING HELPERS
   // ===========================================================================
+  // [UPDATE] Label & Badge sesuai API Baru
   const statusLabels: Record<string, string> = {
+    pending: "Pending",
     success: "Berhasil",
+    failed: "Gagal",
     duplicate: "Duplikat",
   };
 
   const getBadgeVariant = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "success": return "success";
-      case "duplicate": return "warning";
+      case "pending": return "warning";
+      case "failed": return "danger";
+      case "duplicate": return "secondary";
       default: return "secondary";
     }
   };
@@ -247,18 +274,6 @@
   // --- 12. REACTIVE EFFECTS ($effect)
   // ===========================================================================
   
-  // Fetch Dropdown Options on Mount
-  $effect(() => {
-    if (programOptions.length === 0) {
-      getMasterDropdownOptions().then((res) => {
-        // [PERBAIKAN] Tembak ke variabel Options milik halaman Transaksi
-        programOptions = res.programs;
-        rekeningOptions = res.rekenings;
-        sumberOptions = res.sumbers;
-      });
-    }
-  });
-
   // Debounce Search
   const applySearch = debounce(() => handleFilterChange(), 500);
   $effect(() => {
@@ -358,7 +373,7 @@
         actionsClass="flex items-center gap-2"
         filterButtonClass="flex items-center gap-2"
         filterLabelClass="hidden sm:inline"
-        filterActive={selectedPrograms.length > 0 || selectedRekenings.length > 0 || selectedSumbers.length > 0 || !!selectedStatus || isNominalFilterActive}
+        filterActive={selectedPrograms.length > 0 || selectedRekenings.length > 0 || selectedSumbers.length > 0 || !!selectedStatus || !!selectedScopeMode || isNominalFilterActive}
         onResetFilter={resetFilters}
         onApplyFilter={applyModalFilter}
       >
@@ -371,6 +386,10 @@
         {#snippet filterContent()}
           <div class="grid grid-cols-1 gap-4">
             <div class="flex flex-col gap-4">
+              <div class="flex flex-col gap-2">
+                <Select label="Filter Cakupan" options={scopeOptions} bind:value={selectedScopeMode} placeholder="Semua Scope" />
+              </div>
+
               <div class="flex flex-col gap-2">
                 <Select label="Status Transaksi" options={statuses} bind:value={selectedStatus} placeholder="Semua Status" />
               </div>
@@ -428,15 +447,15 @@
                 </TableCell>
                 <TableCell>
                   <div class="flex flex-col gap-0.5">
-                    <span class="font-semibold text-sm leading-none text-gray-900">{trx.donatur?.nama_donatur || "Hamba Allah"}</span>
-                    <span class="text-xs text-gray-600">{trx.donatur?.nomor_hp_donatur || "-"}</span>
+                    <span class="font-semibold text-sm leading-none text-gray-900">{trx.donatur?.nama_donatur || trx.nama_donatur || "Hamba Allah"}</span>
+                    <span class="text-xs text-gray-600">{trx.donatur?.nomor_hp || trx.nomor_hp_donatur || "-"}</span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div class="flex flex-col items-start gap-1.5">
                     <span class="font-bold text-sm text-gray-900 leading-none">Rp {formatNumber(trx.nominal, "standard")}</span>
                     <Badge variant={getBadgeVariant(trx.status)} size="sm" class="text-[10px] uppercase tracking-wider">
-                      {statusLabels[trx.status] || trx.status}
+                      {statusLabels[trx.status?.toLowerCase()] || trx.status}
                     </Badge>
                   </div>
                 </TableCell>
@@ -444,7 +463,7 @@
                   <div class="flex flex-col gap-0.5">
                     <span class="font-semibold text-sm leading-none text-gray-900">{trx.program?.nama_program || "-"}</span>
                     <span class="text-[10px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded w-max mt-0.5">
-                      {trx.sumber?.sumber_transaksi || "-"}
+                      {trx.sumber?.nama_sumber || trx.sumber?.sumber_transaksi || "-"}
                     </span>
                   </div>
                 </TableCell>
@@ -481,7 +500,7 @@
 
       <div class="md:hidden flex flex-col bg-gray-50/30 gap-3">
         {#each transactions as trx (trx.id)}
-          <SimpleTableCard name={trx.donatur?.nama_donatur || "Hamba Allah"} phone={trx.donatur?.nomor_hp_donatur || "-"} program={trx.program?.nama_program || "-"} date={formatDate(trx.tanggal_transaksi)} amount={formatNumber(trx.nominal, "standard")} statusLabel={statusLabels[trx.status] || trx.status} statusVariant={getBadgeVariant(trx.status)} />
+          <SimpleTableCard name={trx.donatur?.nama_donatur || trx.nama_donatur || "Hamba Allah"} phone={trx.donatur?.nomor_hp || trx.nomor_hp_donatur || "-"} program={trx.program?.nama_program || "-"} date={formatDate(trx.tanggal_transaksi)} amount={formatNumber(trx.nominal, "standard")} statusLabel={statusLabels[trx.status?.toLowerCase()] || trx.status} statusVariant={getBadgeVariant(trx.status)} />
         {:else}
           <div class="py-10 flex justify-center text-center text-sm text-gray-500 border border-dashed rounded-lg">
             {#if isLoading}

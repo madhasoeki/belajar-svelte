@@ -74,9 +74,6 @@
       toastStore.success("Data cabang berhasil diperbarui.", "Berhasil");
       goto("/cabang");
     } catch (error: any) {
-        console.log("Error saat update cabang:", error); // Debug log
-        console.log("Payload yang dikirim:", { nama_cabang, alamat, status }); // Debug log payload
-        console.log("Endpoint yang dipanggil:", `${API_ENDPOINTS.CABANG.UPDATE}/${idCabang}`); // Debug log endpoint
       toastStore.error(error.message || "Gagal memperbarui data cabang.");
     } finally {
       isSaving = false;
@@ -84,19 +81,11 @@
   }
 </script>
 
-<div class="max-w-2xl mx-auto flex flex-col gap-6 w-full pb-20 md:pb-6">
-  <div class="flex items-center gap-4">
-    <Button variant="outline" size="sm" onclick={() => goto("/cabang")} class="px-2">
-      <ArrowLeft size={18} />
-    </Button>
-    <div>
-      <h1 class="text-xl font-bold text-gray-900">Edit Data Cabang</h1>
-      <p class="text-sm text-gray-500">Perbarui informasi cabang operasional dengan ID: {idCabang}</p>
-    </div>
-  </div>
+<div class="max-w-full mx-auto flex flex-col gap-6 w-full pb-20 md:pb-6">
 
   <Card>
-    <CardContent class="pt-6">
+  <CardHeader title="Form Edit Cabang" description="Pastikan semua data yang diperlukan sudah diisi dengan benar." icon={Building2} iconColor="text-(--color-primary)" />
+    <CardContent>
       {#if isFetching}
         <div class="py-12 flex flex-col items-center justify-center gap-3">
           <LoadingBars size={30} class="text-(--color-primary)" />

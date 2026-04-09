@@ -1,31 +1,34 @@
 <script lang="ts">
-  import { Card, CardContent } from "$lib/components/ui/card";
+  import { Card, CardHeader, CardContent } from "$lib/components/ui/card";
   import { Input, Select, MultiSelect } from "$lib/components/ui/forms";
   import Button from "$lib/components/ui/button/Button.svelte";
   import { toastStore } from "$lib/stores/toast.svelte";
   import { apiClient } from "$lib/utils/api";
-  import { getMasterDropdownOptions } from "$lib/utils/helpers"; // Gunakan utilitasmu
+  import { getMasterDropdownOptions } from "$lib/utils/helpers"; 
   import { API_ENDPOINTS } from "$lib/constans/endpoints";
   import { goto } from "$app/navigation";
-  import { Users, Building2, Save, ArrowLeft } from "lucide-svelte";
+  import { Users, Save } from "lucide-svelte";
 
   let nama_tim = $state("");
   let cabang_id = $state("");
+  let status = $state("aktif"); // [BARU] Default aktif
   let program_ids = $state<string[]>([]);
   let rekening_ids = $state<string[]>([]);
   
   let isLoading = $state(false);
 
-  // Master Data Options
   let cabangOptions = $state<{label: string, value: string}[]>([]);
   let programOptions = $state<{label: string, value: string}[]>([]);
   let rekeningOptions = $state<{label: string, value: string}[]>([]);
 
+  // [BARU] Opsi status dengan nonaktif
+  const statusOptions = [
+    { label: "Aktif", value: "aktif" },
+    { label: "Tidak Aktif", value: "nonaktif" } 
+  ];
+
   $effect(() => {
-    // Fungsi untuk menarik master data
     async function fetchMasters() {
-      // Asumsi: getMasterDropdownOptions bisa kamu modifikasi untuk menarik data Cabang juga
-      // Atau fetch manual menggunakan apiClient.get()
       try {
         const resCabang = await apiClient.get(API_ENDPOINTS.CABANG.LIST);
         cabangOptions = (resCabang.data || []).map((c: any) => ({ label: c.nama_cabang, value: c.id }));
@@ -48,10 +51,11 @@
     isLoading = true;
 
     try {
-      // Catatan: Pastikan payload JSON Golang-mu mengharapkan array ID untuk relasi M2M
+      // [UPDATE] Kirim status di payload
       await apiClient.post(API_ENDPOINTS.TIM.CREATE, {
         nama_tim,
         cabang_id,
+        status,
         program_ids, 
         rekening_ids 
       });
@@ -66,55 +70,31 @@
   }
 </script>
 
-<div class="max-w-2xl mx-auto flex flex-col gap-6 w-full pb-20 md:pb-6">
-  <div class="flex items-center gap-4">
-    <Button variant="outline" size="sm" onclick={() => goto("/tim")} class="px-2">
-      <ArrowLeft size={18} />
-    </Button>
-    <div>
-      <h1 class="text-xl font-bold text-gray-900">Tambah Tim Baru</h1>
-      <p class="text-sm text-gray-500">Buat entitas tim dan berikan hak akses relasional.</p>
-    </div>
-  </div>
-
+<div class="max-w-full mx-auto flex flex-col gap-6 w-full pb-20 md:pb-6">
   <Card>
-    <CardContent class="pt-6">
+    <CardHeader 
+      title="Form Tambah Tim" 
+      description="Pastikan semua data dan hak akses relasional sudah diisi dengan benar." 
+      icon={Users} 
+      iconColor="text-(--color-primary)" 
+    />
+    <CardContent>
       <form onsubmit={handleSubmit} class="flex flex-col gap-6">
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <Input 
-            label="Nama Tim *" 
-            placeholder="Contoh: Tim Alpha JKT" 
-            iconLeft={Users}
-            bind:value={nama_tim} 
-          />
-          <Select 
-            label="Cabang Induk *" 
-            options={cabangOptions} 
-            bind:value={cabang_id} 
-            placeholder="Pilih Cabang"
-            searchable={true}
-          />
+          <Input label="Nama Tim *" placeholder="Contoh: Tim Alpha JKT" iconLeft={Users} bind:value={nama_tim} />
+          <Select label="Cabang Induk *" options={cabangOptions} bind:value={cabang_id} placeholder="Pilih Cabang" searchable={true} />
         </div>
 
         <div class="h-px bg-gray-100 my-2"></div>
-        <p class="text-sm font-semibold text-gray-700">Akses Modul Transaksi</p>
+        <p class="text-sm font-semibold text-gray-700">Akses Modul Transaksi & Status</p>
 
-        <MultiSelect 
-          label="Program yang Dikelola" 
-          options={programOptions} 
-          bind:values={program_ids} 
-          placeholder="Pilih program..." 
-          searchPlaceholder="Cari program..." 
-        />
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <Select label="Status Operasional *" options={statusOptions} bind:value={status} />
+        </div>
 
-        <MultiSelect 
-          label="Rekening yang Dikelola" 
-          options={rekeningOptions} 
-          bind:values={rekening_ids} 
-          placeholder="Pilih rekening..." 
-          searchPlaceholder="Cari rekening..." 
-        />
+        <MultiSelect label="Program yang Dikelola" options={programOptions} bind:values={program_ids} placeholder="Pilih program..." searchPlaceholder="Cari program..." />
+        <MultiSelect label="Rekening yang Dikelola" options={rekeningOptions} bind:values={rekening_ids} placeholder="Pilih rekening..." searchPlaceholder="Cari rekening..." />
 
         <div class="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-100">
           <Button type="button" variant="ghost" onclick={() => goto("/tim")}>Batal</Button>

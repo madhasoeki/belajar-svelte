@@ -9,3 +9,4 @@ export { default as Radio } from "./Radio.svelte";
 export { default as RichTextEditor } from "./RichTextEditor.svelte";
 export { default as Select } from "./Select.svelte";
 export { default as Textarea } from "./Textarea.svelte";
+export { default as ToggleSwitch } from "./ToggleSwitch.svelte";

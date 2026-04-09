@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Card, CardContent } from "$lib/components/ui/card";
+  import type { PageData } from './$types';
+  import { Card, CardHeader, CardContent } from "$lib/components/ui/card";
   import { Input, Select, MultiSelect } from "$lib/components/ui/forms";
   import Button from "$lib/components/ui/button/Button.svelte";
   import LoadingBars from "$lib/components/ui/loading/LoadingBars.svelte";
@@ -8,15 +9,16 @@
   import { getMasterDropdownOptions } from "$lib/utils/helpers";
   import { API_ENDPOINTS } from "$lib/constans/endpoints";
   import { goto } from "$app/navigation";
-  import { Users, Save, ArrowLeft } from "lucide-svelte";
+  import { Users, Save } from "lucide-svelte";
 
-  let { data } = $props();
+  let { data }: { data: PageData } = $props();
   const idTim = $derived(data.idTim);
 
   let nama_tim = $state("");
   let cabang_id = $state("");
   let program_ids = $state<string[]>([]);
   let rekening_ids = $state<string[]>([]);
+  let status = $state("");
   
   let isSaving = $state(false);
   let isFetching = $state(true);
@@ -24,13 +26,18 @@
   let cabangOptions = $state<{label: string, value: string}[]>([]);
   let programOptions = $state<{label: string, value: string}[]>([]);
   let rekeningOptions = $state<{label: string, value: string}[]>([]);
+  
+  // [UPDATE] Nilai diganti menjadi nonaktif
+  const statusOptions = [
+    { label: "Aktif", value: "aktif" },
+    { label: "Tidak Aktif", value: "nonaktif" } 
+  ];
 
-  const isValid = $derived(nama_tim.trim() !== "" && cabang_id.trim() !== "");
+  const isValid = $derived(nama_tim.trim() !== "" && cabang_id.trim() !== "" && status !== "");
 
   $effect(() => {
     async function loadData() {
       try {
-        // 1. Ambil Master Data untuk Dropdown
         const resCabang = await apiClient.get(API_ENDPOINTS.CABANG.LIST);
         cabangOptions = (resCabang.data || []).map((c: any) => ({ label: c.nama_cabang, value: c.id }));
 
@@ -38,14 +45,16 @@
         programOptions = resMaster.programs;
         rekeningOptions = resMaster.rekenings;
 
-        // 2. Ambil Detail Tim
         const resTim = await apiClient.get(`${API_ENDPOINTS.TIM.LIST}/${idTim}`);
-        const detail = Array.isArray(resTim.data || resTim) ? (resTim.data || resTim)[0] : (resTim.data || resTim);
+        
+        const result = resTim.data || resTim;
+        const detail = Array.isArray(result) ? result[0] : result;
 
         nama_tim = detail.nama_tim || "";
         cabang_id = detail.cabang_id || "";
+        // Pastikan normalisasi di client side jika backend masih mengirim "tidak aktif"
+        status = detail.status?.toLowerCase() === "aktif" ? "aktif" : "nonaktif"; 
         
-        // [EKSTRAKSI RELASI]: Petakan array objek dari Golang menjadi array ID murni
         program_ids = (detail.programs || []).map((p: any) => p.id);
         rekening_ids = (detail.rekenings || []).map((r: any) => r.id);
 
@@ -70,7 +79,8 @@
         nama_tim,
         cabang_id,
         program_ids, 
-        rekening_ids 
+        rekening_ids,
+        status // Kirim status dalam PUT
       });
       
       toastStore.success("Data tim berhasil diperbarui.", "Berhasil");
@@ -83,19 +93,10 @@
   }
 </script>
 
-<div class="max-w-2xl mx-auto flex flex-col gap-6 w-full pb-20 md:pb-6">
-  <div class="flex items-center gap-4">
-    <Button variant="outline" size="sm" onclick={() => goto("/tim")} class="px-2">
-      <ArrowLeft size={18} />
-    </Button>
-    <div>
-      <h1 class="text-xl font-bold text-gray-900">Edit Data Tim</h1>
-      <p class="text-sm text-gray-500">Perbarui informasi tim dengan ID: {idTim}</p>
-    </div>
-  </div>
-
+<div class="max-w-full mx-auto flex flex-col gap-6 w-full pb-20 md:pb-6">
   <Card>
-    <CardContent class="pt-6">
+    <CardHeader title="Form Edit Tim" description="Perbarui informasi tim, status operasional, dan hak akses relasional." icon={Users} iconColor="text-(--color-primary)" />
+    <CardContent>
       {#if isFetching}
         <div class="py-12 flex flex-col items-center justify-center gap-3">
           <LoadingBars size={30} class="text-(--color-primary)" />
@@ -103,13 +104,18 @@
         </div>
       {:else}
         <form onsubmit={handleSubmit} class="flex flex-col gap-6">
+          
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Input label="Nama Tim *" iconLeft={Users} bind:value={nama_tim} />
+            <Input label="Nama Tim *" placeholder="Contoh: Tim Alpha JKT" iconLeft={Users} bind:value={nama_tim} />
             <Select label="Cabang Induk *" options={cabangOptions} bind:value={cabang_id} searchable={true} />
           </div>
 
           <div class="h-px bg-gray-100 my-2"></div>
-          <p class="text-sm font-semibold text-gray-700">Akses Modul Transaksi</p>
+          <p class="text-sm font-semibold text-gray-700">Akses Modul Transaksi & Status</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <Select label="Status Operasional *" options={statusOptions} bind:value={status} />
+          </div>
 
           <MultiSelect label="Program yang Dikelola" options={programOptions} bind:values={program_ids} searchPlaceholder="Cari program..." />
           <MultiSelect label="Rekening yang Dikelola" options={rekeningOptions} bind:values={rekening_ids} searchPlaceholder="Cari rekening..." />

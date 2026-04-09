@@ -36,18 +36,21 @@ export const API_ENDPOINTS = {
     CREATE: "/cabang",
     UPDATE: "/cabang",
     LIST: "/cabang",
+    UPDATE_STATUS: (id: string) => `/cabang/${id}/status`,
     DELETE: "/cabang",
   },
   TIM: {
     CREATE: "/tim",
     UPDATE: "/tim",
     LIST: "/tim",
+    UPDATE_STATUS: (id: string) => `/tim/${id}/status`,
     DELETE: "/tim",
   },
   USER: {
     CREATE: "/user",
     UPDATE: "/user",
     LIST: "/user",
+    UPDATE_STATUS: (id: string) => `/user/${id}/status`,
     DELETE: "/user",
   },
   ROLE: {

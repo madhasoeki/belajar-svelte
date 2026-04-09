@@ -1,16 +1,22 @@
 <script lang="ts">
   import { Card, CardContent } from "$lib/components/ui/card";
   import Badge from "$lib/components/ui/badge/Badge.svelte";
+  
+  // [UPDATE 1] Import tipe Snippet dari svelte
+  import type { Snippet } from "svelte";
 
   interface Props {
     name: string;
     phone?: string;
     program?: string;
-    date?: string; // [UPDATE] Jadikan opsional
+    date?: string; 
     amount: string | number;
-    amountPrefix?: string; // [BARU] Agar tulisan "Rp" bisa dihilangkan
-    statusLabel?: string; // [UPDATE] Jadikan opsional
+    amountPrefix?: string; 
+    statusLabel?: string; 
     statusVariant?: "success" | "warning" | "danger" | "default" | string | any;
+    
+    // [UPDATE 2] Daftarkan actions sebagai Snippet (opsional)
+    actions?: Snippet; 
   }
 
   let {
@@ -19,9 +25,12 @@
     program = "",
     date = "",
     amount,
-    amountPrefix = "Rp", // Default tetap "Rp" agar halaman Transaksi tidak rusak
+    amountPrefix = "Rp", 
     statusLabel = "",
     statusVariant = "default",
+    
+    // [UPDATE 3] Ekstrak actions dari $props()
+    actions,
   }: Props = $props();
 </script>
 
@@ -35,11 +44,19 @@
         {/if}
       </div>
 
-      {#if statusLabel}
-        <Badge shape="pill" variant={statusVariant}>
-          {statusLabel}
-        </Badge>
-      {/if}
+      <div class="flex items-center gap-1.5">
+        {#if statusLabel}
+          <Badge shape="pill" variant={statusVariant}>
+            {statusLabel}
+          </Badge>
+        {/if}
+        
+        {#if actions}
+          <div class="-mr-1">
+            {@render actions()}
+          </div>
+        {/if}
+      </div>
     </div>
 
     <div class="flex justify-between items-end mt-1">

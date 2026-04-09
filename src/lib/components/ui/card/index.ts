@@ -4,6 +4,7 @@ export { default as CardTitle } from "./CardTitle.svelte";
 export { default as CardDescription } from "./CardDescription.svelte";
 export { default as CardContent } from "./CardContent.svelte";
 export { default as CardFooter } from "./CardFooter.svelte";
+export { default as EntityCard } from "./EntityCard.svelte";
 export { default as LeaderboardItem } from "./LeaderboardItem.svelte";
 export { default as MobileOverviewCard } from "./MobileOverviewCard.svelte";
 export { default as ProgressCard } from "./ProgressCard.svelte";

@@ -12,7 +12,6 @@
     showFilter?: boolean;
     class?: string;
     searchWrapperClass?: string;
-    searchInputClass?: string;
     actionsClass?: string;
     filterButtonClass?: string;
     filterLabelClass?: string;
@@ -34,7 +33,6 @@
     showFilter = true,
     class: className = "flex flex-col sm:flex-row items-center justify-between gap-4",
     searchWrapperClass = "w-full sm:w-72",
-    searchInputClass = "",
     actionsClass = "flex items-center gap-2 w-full sm:w-auto",
     filterButtonClass = "",
     filterLabelClass = "",
