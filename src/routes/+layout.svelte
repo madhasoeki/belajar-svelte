@@ -8,37 +8,59 @@
   import Toast from "$lib/components/ui/toast/Toast.svelte";
   import LoadingBars from "$lib/components/ui/loading/LoadingBars.svelte";
   import { goto } from "$app/navigation";
-  
-  // [BARU] 1. Import Svelte Query
-  import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
+
+  import { QueryClient, QueryClientProvider } from "@tanstack/svelte-query";
 
   let { children } = $props();
 
-  // [BARU] 2. Setup Konfigurasi Enterprise (Circuit Breaker & Caching)
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        retry: 3, // Maksimal coba ulang 3 kali jika API gagal
-        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Jeda makin lama (1s, 2s, 4s)
-        staleTime: 5 * 60 * 1000, // Data dianggap "segar" selama 5 menit, jangan tembak API berulang
-        refetchOnWindowFocus: false, // Jangan tembak API otomatis pas ganti tab browser
+        retry: 3,
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
       },
     },
   });
 
-  // Deteksi apakah rute saat ini adalah halaman login
   const isAuthPage = $derived(page.url.pathname.startsWith("/login"));
   let isCheckingAuth = $state(true);
+
+  // [BARU] 1. State dinamis untuk menggantikan variabel 'user' yang hardcode
+  // 1. Ubah state bawaan
+  let userSession = $state({
+    name: "Loading...",
+    team: "", // Ganti role jadi team
+    avatar: "",
+  });
 
   $effect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("admin_token");
-      
+      const userStr = localStorage.getItem("admin_user");
+
       if (!token && !isAuthPage) {
         goto("/login");
       } else if (token && isAuthPage) {
         goto("/dashboard");
       } else {
+        if (token && userStr) {
+          try {
+            const parsedUser = JSON.parse(userStr);
+            userSession = {
+              name:
+                parsedUser["nama panggilan"] ||
+                parsedUser["nama lengkap"] ||
+                "Admin",
+              // 2. Tarik tim_id. Jika null/undefined, biarkan string kosong
+              team: parsedUser.tim_id || "",
+              avatar: "",
+            };
+          } catch (e) {
+            console.error("Gagal membaca profil user dari local storage");
+          }
+        }
         isCheckingAuth = false;
       }
     }
@@ -56,11 +78,6 @@
     { id: 3, text: "User baru mendaftar", time: "3 jam lalu", read: false },
   ];
 
-  const user = {
-    name: "Mada",
-    avatar: "https://argon-dashboard-pro-svelte.creative-tim.com/img/theme/team-4.jpg",
-  };
-  
   const currentTitle = $derived(page.data.title || "Dashboard");
 </script>
 
@@ -73,28 +90,32 @@
 
 <QueryClientProvider client={queryClient}>
   {#if isCheckingAuth}
-    <div class="min-h-screen w-full flex items-center justify-center bg-(--color-bg-page)">
+    <div
+      class="min-h-screen w-full flex items-center justify-center bg-(--color-bg-page)"
+    >
       <LoadingBars size={40} class="text-(--color-primary)" />
     </div>
+  {:else if isAuthPage}
+    <main class="min-h-screen w-full bg-(--color-bg-page)">
+      {@render children()}
+    </main>
   {:else}
-    {#if isAuthPage}
-      <main class="min-h-screen w-full bg-(--color-bg-page)">
-        {@render children()}
-      </main>
-    {:else}
-      <div class="flex min-h-screen w-full overflow-x-clip bg-(--color-bg-page)">
-        <Sidebar active={active} bind:isCollapsed={isCollapsed} />
-        
-        <div class="min-w-0 flex-1 flex flex-col transition-all duration-300 ease-in-out pb-24 md:pb-0 {isCollapsed ? 'md:ml-20' : 'md:ml-64'}">
-          <Topbar title={currentTitle} notifications={notifications} user={user} />
-          <main class="p-4 md:p-8 w-full min-w-0 flex-1">
-            {@render children()}
-          </main>
-        </div>
+    <div class="flex min-h-screen w-full overflow-x-clip bg-(--color-bg-page)">
+      <Sidebar {active} bind:isCollapsed />
 
-        <BottomNav />
+      <div
+        class="min-w-0 flex-1 flex flex-col transition-all duration-300 ease-in-out pb-24 md:pb-0 {isCollapsed
+          ? 'md:ml-20'
+          : 'md:ml-64'}"
+      >
+        <Topbar title={currentTitle} {notifications} user={userSession} />
+        <main class="p-4 md:p-8 w-full min-w-0 flex-1">
+          {@render children()}
+        </main>
       </div>
-    {/if}
+
+      <BottomNav />
+    </div>
   {/if}
 </QueryClientProvider>
 

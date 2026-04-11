@@ -1,5 +1,24 @@
 import { PUBLIC_API_URL } from "$env/static/public";
 
+const shouldForceLogout = (status: number, errorData: any) => {
+  if (status !== 401) return false;
+
+  const message = String(errorData?.pesan || errorData?.message || "").toLowerCase();
+  // Hanya paksa logout jika memang indikasi token/sesi tidak valid atau expired.
+  return /(token|jwt|expired|invalid|unauthorized|sesi|session)/.test(message);
+};
+
+const maybeRedirectToLogin = (status: number, errorData: any) => {
+  if (
+    shouldForceLogout(status, errorData) &&
+    typeof window !== "undefined" &&
+    window.location.pathname !== "/login"
+  ) {
+    localStorage.removeItem("admin_token");
+    window.location.href = "/login";
+  }
+};
+
 const getAuthHeaders = () => {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -30,10 +49,7 @@ export const apiClient = {
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
 
-        if (response.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login") {
-          localStorage.removeItem("admin_token");
-          window.location.href = "/login";
-        }
+        maybeRedirectToLogin(response.status, errorData);
 
         throw new Error(errorData?.pesan || errorData?.message || `Terjadi kesalahan: ${response.status}`);
       }
@@ -56,10 +72,7 @@ export const apiClient = {
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
 
-        if (response.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login") {
-          localStorage.removeItem("admin_token");
-          window.location.href = "/login";
-        }
+        maybeRedirectToLogin(response.status, errorData);
 
         throw new Error(errorData?.pesan || errorData?.message || `Terjadi kesalahan: ${response.status}`);
       }
@@ -67,6 +80,29 @@ export const apiClient = {
       return await response.json();
     } catch (error) {
       console.error(`[API Error] GET ${endpoint}:`, error);
+      throw error;
+    }
+  },
+
+  // 2b. Fungsi GET Blob (Untuk Download CSV/File)
+  async getBlob(endpoint: string) {
+    try {
+      const response = await fetch(`${PUBLIC_API_URL}${endpoint}`, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+
+        maybeRedirectToLogin(response.status, errorData);
+
+        throw new Error(errorData?.pesan || errorData?.message || `Terjadi kesalahan: ${response.status}`);
+      }
+
+      return await response.blob();
+    } catch (error) {
+      console.error(`[API Error] GET(BLOB) ${endpoint}:`, error);
       throw error;
     }
   },
@@ -83,10 +119,7 @@ export const apiClient = {
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
 
-        if (response.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login") {
-          localStorage.removeItem("admin_token");
-          window.location.href = "/login";
-        }
+        maybeRedirectToLogin(response.status, errorData);
 
         throw new Error(errorData?.pesan || errorData?.message || `Terjadi kesalahan: ${response.status}`);
       }
@@ -110,10 +143,7 @@ export const apiClient = {
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
 
-        if (response.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login") {
-          localStorage.removeItem("admin_token");
-          window.location.href = "/login";
-        }
+        maybeRedirectToLogin(response.status, errorData);
 
         throw new Error(errorData?.pesan || errorData?.message || `Terjadi kesalahan: ${response.status}`);
       }
@@ -143,10 +173,7 @@ export const apiClient = {
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
 
-        if (response.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login") {
-          localStorage.removeItem("admin_token");
-          window.location.href = "/login";
-        }
+        maybeRedirectToLogin(response.status, errorData);
 
         throw new Error(errorData?.pesan || errorData?.message || `Terjadi kesalahan: ${response.status}`);
       }

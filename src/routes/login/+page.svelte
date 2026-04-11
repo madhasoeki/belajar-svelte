@@ -45,9 +45,13 @@
       });
 
       const token = response.data?.token || response.token;
+      const user = response.data?.user || response.user || null;
 
       if (token) {
         localStorage.setItem("admin_token", token);
+        if (user) {
+          localStorage.setItem("admin_user", JSON.stringify(user));
+        }
         toastStore.success("Login berhasil. Selamat datang!", "Sukses");
         goto("/dashboard");
       } else {

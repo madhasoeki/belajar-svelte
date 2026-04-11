@@ -8,6 +8,7 @@
   import { Dropdown, DropdownItem } from "$lib/components/ui/dropdown";
   import Pagination from "$lib/components/ui/pagination/Pagination.svelte";
   import Button from "$lib/components/ui/button/Button.svelte";
+  import SegmentedControl from "$lib/components/ui/button/SegmentedControl.svelte";
   import Modal from "$lib/components/ui/modal/Modal.svelte";
   import Badge from "$lib/components/ui/badge/Badge.svelte";
   import LoadingBars from "$lib/components/ui/loading/LoadingBars.svelte";
@@ -37,7 +38,7 @@
   // --- 3. STATE: CORE DATA & PAGINATION
   // ===========================================================================
   let transactions = $state<any[]>([]);
-  let meta = $state({ page: 1, limit: 10, total_page: 1, total_data: 0 });
+  let meta = $state({ page: 1, limit: 20, total_page: 1, total_data: 0 });
   let isLoading = $state(true);
   let isAppending = $state(false);
 
@@ -63,6 +64,8 @@
   let searchValue = $state("");
   let selectedStatus = $state("");
   let selectedScopeMode = $state(""); // [BARU] State untuk filter Scope
+  let roleName = $state("");
+  let viewMode = $state("self");
   
   let selectedPrograms = $state<string[]>([]);
   let selectedRekenings = $state<string[]>([]);
@@ -86,9 +89,7 @@
   // [UPDATE] Constants Baku sesuai Kontrak API Baru
   const statuses = [
     { label: "Semua Status", value: "" },
-    { label: "Pending", value: "pending" },
     { label: "Berhasil", value: "success" },
-    { label: "Gagal", value: "failed" },
     { label: "Duplikat", value: "duplicate" },
   ];
 
@@ -96,6 +97,11 @@
     { label: "Semua Akses", value: "" },
     { label: "Transaksi Saya (Self)", value: "self" },
     { label: "Transaksi Tim (Team)", value: "team" },
+  ];
+
+  const coordinatorViewOptions = [
+    { label: "Lihat Personal", value: "self" },
+    { label: "Lihat Tim", value: "team" },
   ];
 
   const nominalOperators = [
@@ -125,6 +131,27 @@
       : selectedNominalOperator !== "" && nominalValue !== null
   );
 
+  const isKoordinatorCS = $derived(
+    roleName
+      .toLowerCase()
+      .replace(/[_-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim() === "koordinator cs",
+  );
+
+  function decodeRoleFromToken(token: string): string {
+    try {
+      const payloadBase64 = token.split(".")[1];
+      if (!payloadBase64) return "";
+
+      const normalized = payloadBase64.replace(/-/g, "+").replace(/_/g, "/");
+      const payload = JSON.parse(atob(normalized));
+      return payload?.role || payload?.user?.role || "";
+    } catch {
+      return "";
+    }
+  }
+
   // ===========================================================================
   // --- 8. API FETCHING & URL BUILDER
   // ===========================================================================
@@ -143,9 +170,9 @@
     // [BARU] Kirim parameter Scope
     if (selectedScopeMode) params.append("scope_mode", selectedScopeMode);
 
-    if (selectedPrograms.length > 0) params.append("program_id", selectedPrograms.join(","));
-    if (selectedRekenings.length > 0) params.append("rekening_id", selectedRekenings.join(","));
-    if (selectedSumbers.length > 0) params.append("sumber_id", selectedSumbers.join(","));
+    if (selectedPrograms.length > 0) params.append("program_id", selectedPrograms[0]);
+    if (selectedRekenings.length > 0) params.append("rekening_id", selectedRekenings[0]);
+    if (selectedSumbers.length > 0) params.append("sumber_id", selectedSumbers[0]);
     if (selectedStatus) params.append("status", selectedStatus);
 
     if (selectedNominalOperator === "between") {
@@ -205,7 +232,7 @@
   }
 
   function resetFilters() {
-    selectedScopeMode = ""; // [BARU] Reset scope
+    selectedScopeMode = isKoordinatorCS ? viewMode : "";
     selectedPrograms = [];
     selectedRekenings = [];
     selectedSumbers = [];
@@ -219,9 +246,27 @@
   // ===========================================================================
   // --- 10. EXPORT & DELETE ACTIONS
   // ===========================================================================
-  function handleExport() {
+  async function handleExport() {
     const qs = buildQueryParams(true);
-    window.location.href = `${API_ENDPOINTS.TRANSAKSI.EXPORT}?${qs}`;
+
+    try {
+      const blob = await apiClient.getBlob(`${API_ENDPOINTS.TRANSAKSI.EXPORT}?${qs}`);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const today = new Date().toISOString().slice(0, 10);
+
+      link.href = url;
+      link.download = `Laporan_Transaksi_${today}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toastStore.error(
+        error instanceof Error ? error.message : "Gagal mengekspor data transaksi.",
+        "Ekspor Gagal",
+      );
+    }
   }
 
   function confirmDelete(id: string | null = null) {
@@ -294,7 +339,8 @@
 
   // Pagination & Limit Change Handler
   let prevPage = 1;
-  let prevLimit = 5;
+  let prevLimit = 20;
+  let prevScopeMode = "";
   $effect(() => {
     let shouldFetch = false;
 
@@ -314,9 +360,51 @@
       isAppending = false;
     }
   });
+
+  $effect(() => {
+    if (selectedScopeMode !== prevScopeMode) {
+      prevScopeMode = selectedScopeMode;
+      handleFilterChange();
+    }
+  });
+
+  $effect(() => {
+    if (typeof window === "undefined") return;
+
+    const rawUser = localStorage.getItem("admin_user");
+    if (rawUser) {
+      try {
+        const parsed = JSON.parse(rawUser);
+        roleName = parsed?.role || "";
+      } catch {
+        roleName = "";
+      }
+    }
+
+    if (!roleName) {
+      const token = localStorage.getItem("admin_token") || "";
+      roleName = decodeRoleFromToken(token);
+    }
+  });
+
+  $effect(() => {
+    if (isKoordinatorCS) {
+      selectedScopeMode = viewMode;
+    }
+  });
 </script>
 
 <div class="max-w-full mx-auto flex flex-col gap-4 md:gap-6">
+  {#if isKoordinatorCS}
+    <div class="flex justify-end">
+      <SegmentedControl
+        options={coordinatorViewOptions}
+        bind:selected={viewMode}
+        class="w-full md:w-auto"
+      />
+    </div>
+  {/if}
+
   <div class="flex justify-end md:hidden">
     <DateRangePicker bind:startDate bind:endDate align="right" />
   </div>
@@ -369,7 +457,6 @@
         searchPlaceholder="Cari transaksi..."
         class="mb-4 flex flex-row gap-3 items-start md:items-center justify-between"
         searchWrapperClass="w-full"
-        searchInputClass="w-full"
         actionsClass="flex items-center gap-2"
         filterButtonClass="flex items-center gap-2"
         filterLabelClass="hidden sm:inline"
@@ -386,9 +473,11 @@
         {#snippet filterContent()}
           <div class="grid grid-cols-1 gap-4">
             <div class="flex flex-col gap-4">
-              <div class="flex flex-col gap-2">
-                <Select label="Filter Cakupan" options={scopeOptions} bind:value={selectedScopeMode} placeholder="Semua Scope" />
-              </div>
+              {#if !isKoordinatorCS}
+                <div class="flex flex-col gap-2">
+                  <Select label="Filter Cakupan" options={scopeOptions} bind:value={selectedScopeMode} placeholder="Semua Scope" />
+                </div>
+              {/if}
 
               <div class="flex flex-col gap-2">
                 <Select label="Status Transaksi" options={statuses} bind:value={selectedStatus} placeholder="Semua Status" />
@@ -448,7 +537,7 @@
                 <TableCell>
                   <div class="flex flex-col gap-0.5">
                     <span class="font-semibold text-sm leading-none text-gray-900">{trx.donatur?.nama_donatur || trx.nama_donatur || "Hamba Allah"}</span>
-                    <span class="text-xs text-gray-600">{trx.donatur?.nomor_hp || trx.nomor_hp_donatur || "-"}</span>
+                    <span class="text-xs text-gray-600">{trx.donatur?.nomor_hp_donatur || trx.nomor_hp_donatur || "-"}</span>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -500,7 +589,7 @@
 
       <div class="md:hidden flex flex-col bg-gray-50/30 gap-3">
         {#each transactions as trx (trx.id)}
-          <SimpleTableCard name={trx.donatur?.nama_donatur || trx.nama_donatur || "Hamba Allah"} phone={trx.donatur?.nomor_hp || trx.nomor_hp_donatur || "-"} program={trx.program?.nama_program || "-"} date={formatDate(trx.tanggal_transaksi)} amount={formatNumber(trx.nominal, "standard")} statusLabel={statusLabels[trx.status?.toLowerCase()] || trx.status} statusVariant={getBadgeVariant(trx.status)} />
+          <SimpleTableCard name={trx.donatur?.nama_donatur || trx.nama_donatur || "Hamba Allah"} phone={trx.donatur?.nomor_hp_donatur || trx.nomor_hp_donatur || "-"} program={trx.program?.nama_program || "-"} date={formatDate(trx.tanggal_transaksi)} amount={formatNumber(trx.nominal, "standard")} statusLabel={statusLabels[trx.status?.toLowerCase()] || trx.status} statusVariant={getBadgeVariant(trx.status)} />
         {:else}
           <div class="py-10 flex justify-center text-center text-sm text-gray-500 border border-dashed rounded-lg">
             {#if isLoading}

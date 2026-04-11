@@ -8,6 +8,7 @@
   import { Dropdown, DropdownItem } from "$lib/components/ui/dropdown";
   import Pagination from "$lib/components/ui/pagination/Pagination.svelte";
   import Button from "$lib/components/ui/button/Button.svelte";
+  import SegmentedControl from "$lib/components/ui/button/SegmentedControl.svelte";
   import Modal from "$lib/components/ui/modal/Modal.svelte";
   import Badge from "$lib/components/ui/badge/Badge.svelte";
   import LoadingBars from "$lib/components/ui/loading/LoadingBars.svelte";
@@ -48,6 +49,9 @@
   let startDate = $state("");
   let endDate = $state("");
   let searchValue = $state("");
+  let selectedScopeMode = $state("");
+  let roleName = $state("");
+  let viewMode = $state("self");
   
   let selectedDomisilis = $state<string[]>([]);
   let selectedLabels = $state<string[]>([]);
@@ -68,9 +72,9 @@
 
   const churnOptions = [
     { label: "Semua Status Retensi", value: "" },
-    { label: "Aman", value: "Aman" },
-    { label: "Warning", value: "Warning" },
-    { label: "Bahaya", value: "Bahaya" },
+    { label: "Aktif", value: "Aktif" },
+    { label: "Beresiko", value: "Beresiko" },
+    { label: "Churn", value: "Churn" },
   ];
 
   const numericOperators = [
@@ -104,6 +108,32 @@
     selectedTrxOperator === "between" ? trxFrom !== null || trxTo !== null : selectedTrxOperator !== "" && trxValue !== null
   );
 
+  const coordinatorViewOptions = [
+    { label: "Lihat Personal", value: "self" },
+    { label: "Lihat Tim", value: "team" },
+  ];
+
+  const isKoordinatorCS = $derived(
+    roleName
+      .toLowerCase()
+      .replace(/[_-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim() === "koordinator cs",
+  );
+
+  function decodeRoleFromToken(token: string): string {
+    try {
+      const payloadBase64 = token.split(".")[1];
+      if (!payloadBase64) return "";
+
+      const normalized = payloadBase64.replace(/-/g, "+").replace(/_/g, "/");
+      const payload = JSON.parse(atob(normalized));
+      return payload?.role || payload?.user?.role || "";
+    } catch {
+      return "";
+    }
+  }
+
   // ===========================================================================
   // --- 7. API FETCHING & URL BUILDER
   // ===========================================================================
@@ -118,9 +148,10 @@
     if (searchValue) params.append("q", searchValue);
     if (startDate) params.append("start_date", startDate);
     if (endDate) params.append("end_date", endDate);
+    if (selectedScopeMode) params.append("scope_mode", selectedScopeMode);
 
-    if (selectedDomisilis.length > 0) params.append("domisili", selectedDomisilis.join(","));
-    if (selectedLabels.length > 0) params.append("label", selectedLabels.join(","));
+    if (selectedDomisilis.length > 0) params.append("domisili", selectedDomisilis[0]);
+    if (selectedLabels.length > 0) params.append("label", selectedLabels[0]);
     if (selectedChurnLabel) params.append("label_churn", selectedChurnLabel);
 
     if (selectedNominalOperator === "between") {
@@ -146,9 +177,15 @@
 
   async function fetchMasterData() {
     try {
+      const labelQs = new URLSearchParams();
+      if (selectedScopeMode) labelQs.append("scope_mode", selectedScopeMode);
+      const labelEndpoint = labelQs.toString()
+        ? `${API_ENDPOINTS.LABEL.LIST}?${labelQs.toString()}`
+        : API_ENDPOINTS.LABEL.LIST;
+
       const [domisiliRes, labelRes] = await Promise.all([
         apiClient.get(API_ENDPOINTS.DOMISILI.LIST), 
-        apiClient.get(API_ENDPOINTS.LABEL.LIST)
+        apiClient.get(labelEndpoint)
       ]);
 
       domisiliOptions = (domisiliRes.data || []).map((item: any) => ({ value: item.nama_domisili, label: item.nama_domisili }));
@@ -219,9 +256,67 @@
     trxTo = null;
   }
 
-  function handleExport() {
-    const qs = buildQueryParams(true);
-    window.location.href = `${API_ENDPOINTS.DONATUR.EXPORT}?${qs}`;
+  function mapExportOperator(op: string) {
+    if (op === "between") return "range";
+    if (op === ">") return "gt";
+    if (op === "<") return "lt";
+    if (op === "=") return "eq";
+    return op;
+  }
+
+  function buildExportQueryParams() {
+    const params = new URLSearchParams();
+
+    if (searchValue) params.append("q", searchValue);
+    if (startDate) params.append("start_date", startDate);
+    if (endDate) params.append("end_date", endDate);
+    if (selectedScopeMode) params.append("scope_mode", selectedScopeMode);
+    if (selectedDomisilis.length > 0) params.append("domisili", selectedDomisilis[0]);
+    if (selectedLabels.length > 0) params.append("label", selectedLabels[0]);
+    if (selectedChurnLabel) params.append("label_churn", selectedChurnLabel);
+
+    if (selectedNominalOperator === "between") {
+      if (nominalFrom !== null) params.append("nominal_from", nominalFrom.toString());
+      if (nominalTo !== null) params.append("nominal_to", nominalTo.toString());
+      if (nominalFrom !== null || nominalTo !== null) params.append("nominal_operator", "range");
+    } else if (selectedNominalOperator && nominalValue !== null) {
+      params.append("nominal_operator", mapExportOperator(selectedNominalOperator));
+      params.append("nominal_value", nominalValue.toString());
+    }
+
+    if (selectedTrxOperator === "between") {
+      if (trxFrom !== null) params.append("transaksi_from", trxFrom.toString());
+      if (trxTo !== null) params.append("transaksi_to", trxTo.toString());
+      if (trxFrom !== null || trxTo !== null) params.append("transaksi_operator", "range");
+    } else if (selectedTrxOperator && trxValue !== null) {
+      params.append("transaksi_operator", mapExportOperator(selectedTrxOperator));
+      params.append("transaksi_value", trxValue.toString());
+    }
+
+    return params.toString();
+  }
+
+  async function handleExport() {
+    const qs = buildExportQueryParams();
+
+    try {
+      const blob = await apiClient.getBlob(`${API_ENDPOINTS.DONATUR.EXPORT}?${qs}`);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const today = new Date().toISOString().slice(0, 10);
+
+      link.href = url;
+      link.download = `Data_Donatur_${today}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toastStore.error(
+        error instanceof Error ? error.message : "Gagal mengekspor data donatur.",
+        "Ekspor Gagal",
+      );
+    }
   }
 
   // ===========================================================================
@@ -273,6 +368,24 @@
       await apiClient.patch(endpoint, { label: finalLabelString });
       toastStore.success(`Label berhasil diperbarui!`, "Sukses");
       donaturs = donaturs.map((d) => (d.id === donaturId ? { ...d, label: finalLabelString } : d));
+
+      // Sinkronkan filter label secara instan agar label baru langsung muncul tanpa refresh.
+      const existing = new Set(
+        labelOptions
+          .map((item: any) => String(item?.value || "").trim())
+          .filter(Boolean),
+      );
+
+      const additions = finalTags
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .filter((tag) => !existing.has(tag))
+        .map((tag) => ({ value: tag, label: tag }));
+
+      if (additions.length > 0) {
+        labelOptions = [...labelOptions, ...additions];
+      }
+
       editingLabelId = null;
     } catch (error) {
       toastStore.error("Gagal memperbarui label.");
@@ -314,6 +427,31 @@
     if (domisiliOptions.length === 0 && labelOptions.length === 0) fetchMasterData();
   });
 
+  $effect(() => {
+    if (typeof window === "undefined") return;
+
+    const rawUser = localStorage.getItem("admin_user");
+    if (rawUser) {
+      try {
+        const parsed = JSON.parse(rawUser);
+        roleName = parsed?.role || "";
+      } catch {
+        roleName = "";
+      }
+    }
+
+    if (!roleName) {
+      const token = localStorage.getItem("admin_token") || "";
+      roleName = decodeRoleFromToken(token);
+    }
+  });
+
+  $effect(() => {
+    if (isKoordinatorCS) {
+      selectedScopeMode = viewMode;
+    }
+  });
+
   // Debounce Search Filter
   const applySearch = debounce(() => handleFilterChange(), 500);
 
@@ -337,6 +475,8 @@
   // Pagination & Limit Change Handler
   let prevPage = 1;
   let prevLimit = 10;
+  let prevScopeMode = "";
+  let prevLabelScopeMode = "";
   $effect(() => {
     let shouldFetch = false;
     if (meta.limit !== prevLimit) {
@@ -355,9 +495,33 @@
       isAppending = false;
     }
   });
+
+  $effect(() => {
+    if (selectedScopeMode !== prevScopeMode) {
+      prevScopeMode = selectedScopeMode;
+      handleFilterChange();
+    }
+  });
+
+  $effect(() => {
+    if (selectedScopeMode !== prevLabelScopeMode) {
+      prevLabelScopeMode = selectedScopeMode;
+      fetchMasterData();
+    }
+  });
 </script>
 
 <div class="max-w-full mx-auto flex flex-col gap-4 md:gap-6">
+  {#if isKoordinatorCS}
+    <div class="flex justify-end">
+      <SegmentedControl
+        options={coordinatorViewOptions}
+        bind:selected={viewMode}
+        class="w-full md:w-auto"
+      />
+    </div>
+  {/if}
+
   <div class="flex justify-end md:hidden">
     <DateRangePicker bind:startDate bind:endDate align="right" />
   </div>
@@ -566,7 +730,7 @@
                         {#each dnt.label
                           .split(",")
                           .map((l: string) => l.trim())
-                          .filter((l: string) => l) as lbl}
+                          .filter((l: string) => l) as lbl, idx (idx)}
                           <Badge variant="info" size="sm" class="text-[10px] py-0 leading-tight">{lbl}</Badge>
                         {/each}
                       {:else}
@@ -691,7 +855,7 @@
                     {#each dnt.label
                       .split(",")
                       .map((l: string) => l.trim())
-                      .filter((l: string) => l) as lbl}
+                      .filter((l: string) => l) as lbl, idx (idx)}
                       <Badge variant="info" size="sm" class="text-[9px] py-0">{lbl}</Badge>
                     {/each}
                   {:else}

@@ -110,36 +110,20 @@
 
   function handleSelectDonatur(donatur: {
     id: string;
-    sapaan: string;
+    sapaan?: string;
     nama_donatur: string;
     nomor_hp_donatur: string;
-    transaksi?: Array<{
-      tanggal_transaksi: string;
-      program: string;
-      rekening: string;
-      nominal: number;
-    }>;
   }) {
     donaturId = donatur.id;
     lastSelectedPhone = donatur.nomor_hp_donatur;
+    donorPhone = donatur.nomor_hp_donatur;
     donorName = donatur.nama_donatur;
     donorGreeting = donatur.sapaan || "Kak";
 
-    let toastMessage = `Data ${donorGreeting} ${donorName} otomatis diisi.`;
-
-    if (donatur.transaksi && donatur.transaksi.length > 0) {
-      const lastTrx = donatur.transaksi[0];
-      selectedProgram = lastTrx.program;
-      selectedRekening = lastTrx.rekening;
-      rawAmount = lastTrx.nominal;
-      toastMessage = `Data donatur dan riwayat donasi terakhir berhasil dimuat.`;
-    } else {
-      selectedProgram = "";
-      selectedRekening = "";
-      rawAmount = null;
-    }
-
-    toastStore.info(toastMessage, "Donatur Ditemukan");
+    toastStore.info(
+      `Data ${donorGreeting} ${donorName} otomatis diisi.`,
+      "Donatur Ditemukan",
+    );
   }
 
   async function handleSubmit(e: Event) {
@@ -218,7 +202,7 @@
               >Sapaan</span
             >
             <div class="flex flex-wrap items-center gap-4">
-              {#each greetings as greet}
+              {#each greetings as greet (greet)}
                 <Radio label={greet} value={greet} bind:group={donorGreeting} />
               {/each}
             </div>
@@ -282,7 +266,7 @@
             />
 
             <div class="flex flex-wrap gap-2 mt-1">
-              {#each quickAmounts as qAmt}
+              {#each quickAmounts as qAmt (qAmt)}
                 <Button
                   variant="outline"
                   size="sm"
