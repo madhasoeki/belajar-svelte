@@ -2,9 +2,31 @@
   // ===========================================================================
   // --- 1. IMPORTS
   // ===========================================================================
-  import { Card, CardHeader, CardContent, SimpleTableCard, CardFooter, MobileOverviewCard, SummaryCard, ProgressCard } from "$lib/components/ui/card";
-  import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableToolbar } from "$lib/components/ui/table";
-  import { Select, MultiSelect, CurrencyInput, DateRangePicker } from "$lib/components/ui/forms";
+  import {
+    Card,
+    CardHeader,
+    CardContent,
+    SimpleTableCard,
+    CardFooter,
+    MobileOverviewCard,
+    SummaryCard,
+    ProgressCard,
+  } from "$lib/components/ui/card";
+  import {
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+    TableToolbar,
+  } from "$lib/components/ui/table";
+  import {
+    Select,
+    MultiSelect,
+    CurrencyInput,
+    DateRangePicker,
+  } from "$lib/components/ui/forms";
   import { Dropdown, DropdownItem } from "$lib/components/ui/dropdown";
   import Pagination from "$lib/components/ui/pagination/Pagination.svelte";
   import Button from "$lib/components/ui/button/Button.svelte";
@@ -12,18 +34,31 @@
   import Modal from "$lib/components/ui/modal/Modal.svelte";
   import Badge from "$lib/components/ui/badge/Badge.svelte";
   import LoadingBars from "$lib/components/ui/loading/LoadingBars.svelte";
-  
+
   import { toastStore } from "$lib/stores/toast.svelte";
   import { formatNumber, formatTrend } from "$lib/utils/formatter";
   import { getMasterDropdownOptions, debounce } from "$lib/utils/helpers";
   import { apiClient } from "$lib/utils/api";
+  import { ROUTES } from "$lib/constans/routes";
   import { API_ENDPOINTS } from "$lib/constans/endpoints";
   import { goto } from "$app/navigation";
-  
-  import { Trash2, Eye, TriangleAlert, Download, ReceiptText, Ellipsis, CircleDollarSign, CreditCard, Users, Activity, Pencil } from "lucide-svelte";
+
+  import {
+    Trash2,
+    Eye,
+    TriangleAlert,
+    Download,
+    ReceiptText,
+    Ellipsis,
+    CircleDollarSign,
+    CreditCard,
+    Users,
+    Activity,
+    Pencil,
+  } from "lucide-svelte";
 
   // [BARU] Import TanStack Query
-  import { createQuery } from '@tanstack/svelte-query';
+  import { createQuery } from "@tanstack/svelte-query";
 
   // ===========================================================================
   // --- 2. SETUP TANGGAL HARI INI
@@ -38,7 +73,7 @@
   // --- 3. STATE: CORE DATA & PAGINATION
   // ===========================================================================
   let transactions = $state<any[]>([]);
-  let meta = $state({ page: 1, limit: 20, total_page: 1, total_data: 0 });
+  let meta = $state({ page: 1, limit: 10, total_page: 1, total_data: 0 });
   let isLoading = $state(true);
   let isAppending = $state(false);
 
@@ -66,7 +101,7 @@
   let selectedScopeMode = $state(""); // [BARU] State untuk filter Scope
   let roleName = $state("");
   let viewMode = $state("self");
-  
+
   let selectedPrograms = $state<string[]>([]);
   let selectedRekenings = $state<string[]>([]);
   let selectedSumbers = $state<string[]>([]);
@@ -78,7 +113,7 @@
 
   // [UPDATE] Menggunakan TanStack Query untuk Mencegah Infinite Loop
   const masterQuery = createQuery(() => ({
-    queryKey: ['masterDropdownOptions'],
+    queryKey: ["masterDropdownOptions"],
     queryFn: async () => await getMasterDropdownOptions(),
   }));
 
@@ -123,20 +158,19 @@
   // ===========================================================================
   // --- 7. DERIVED STATE (COMPUTED VALUES)
   // ===========================================================================
-  const trendText = $derived(startDate === endDate ? "dari kemarin" : "vs periode sebelumnya");
-  
+  const trendText = $derived(
+    startDate === endDate ? "dari kemarin" : "vs periode lalu",
+  );
+
   const isNominalFilterActive = $derived(
-    selectedNominalOperator === "between" 
-      ? nominalFrom !== null || nominalTo !== null 
-      : selectedNominalOperator !== "" && nominalValue !== null
+    selectedNominalOperator === "between"
+      ? nominalFrom !== null || nominalTo !== null
+      : selectedNominalOperator !== "" && nominalValue !== null,
   );
 
   const isKoordinatorCS = $derived(
-    roleName
-      .toLowerCase()
-      .replace(/[_-]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim() === "koordinator cs",
+    roleName.toLowerCase().replace(/[_-]/g, " ").replace(/\s+/g, " ").trim() ===
+      "koordinator cs",
   );
 
   function decodeRoleFromToken(token: string): string {
@@ -166,19 +200,24 @@
     if (searchValue) params.append("q", searchValue);
     if (startDate) params.append("start_date", startDate);
     if (endDate) params.append("end_date", endDate);
-    
+
     // [BARU] Kirim parameter Scope
     if (selectedScopeMode) params.append("scope_mode", selectedScopeMode);
 
-    if (selectedPrograms.length > 0) params.append("program_id", selectedPrograms[0]);
-    if (selectedRekenings.length > 0) params.append("rekening_id", selectedRekenings[0]);
-    if (selectedSumbers.length > 0) params.append("sumber_id", selectedSumbers[0]);
+    if (selectedPrograms.length > 0)
+      params.append("program_id", selectedPrograms[0]);
+    if (selectedRekenings.length > 0)
+      params.append("rekening_id", selectedRekenings[0]);
+    if (selectedSumbers.length > 0)
+      params.append("sumber_id", selectedSumbers[0]);
     if (selectedStatus) params.append("status", selectedStatus);
 
     if (selectedNominalOperator === "between") {
-      if (nominalFrom !== null) params.append("nominal_from", nominalFrom.toString());
+      if (nominalFrom !== null)
+        params.append("nominal_from", nominalFrom.toString());
       if (nominalTo !== null) params.append("nominal_to", nominalTo.toString());
-      if (nominalFrom !== null || nominalTo !== null) params.append("nominal_operator", "between");
+      if (nominalFrom !== null || nominalTo !== null)
+        params.append("nominal_operator", "between");
     } else if (selectedNominalOperator && nominalValue !== null) {
       params.append("nominal_operator", selectedNominalOperator);
       params.append("nominal_value", nominalValue.toString());
@@ -191,7 +230,9 @@
     isLoading = true;
     try {
       const qs = buildQueryParams();
-      const response = await apiClient.get(`${API_ENDPOINTS.TRANSAKSI.LIST}?${qs}`);
+      const response = await apiClient.get(
+        `${API_ENDPOINTS.TRANSAKSI.LIST}?${qs}`,
+      );
 
       if (append) {
         transactions = [...transactions, ...(response.data || [])];
@@ -225,7 +266,12 @@
   }
 
   function applyModalFilter() {
-    if (selectedNominalOperator === "between" && nominalFrom !== null && nominalTo !== null && nominalFrom > nominalTo) {
+    if (
+      selectedNominalOperator === "between" &&
+      nominalFrom !== null &&
+      nominalTo !== null &&
+      nominalFrom > nominalTo
+    ) {
       [nominalFrom, nominalTo] = [nominalTo, nominalFrom];
     }
     handleFilterChange();
@@ -250,7 +296,9 @@
     const qs = buildQueryParams(true);
 
     try {
-      const blob = await apiClient.getBlob(`${API_ENDPOINTS.TRANSAKSI.EXPORT}?${qs}`);
+      const blob = await apiClient.getBlob(
+        `${API_ENDPOINTS.TRANSAKSI.EXPORT}?${qs}`,
+      );
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       const today = new Date().toISOString().slice(0, 10);
@@ -263,7 +311,9 @@
       window.URL.revokeObjectURL(url);
     } catch (error) {
       toastStore.error(
-        error instanceof Error ? error.message : "Gagal mengekspor data transaksi.",
+        error instanceof Error
+          ? error.message
+          : "Gagal mengekspor data transaksi.",
         "Ekspor Gagal",
       );
     }
@@ -276,10 +326,15 @@
 
   async function executeDelete() {
     showDeleteModal = false;
-    
+
     try {
-      await apiClient.delete(`${API_ENDPOINTS.TRANSAKSI.DELETE}/${selectedItemToDelete}`);
-      toastStore.success(`Data transaksi berhasil dihapus dari sistem.`, "Terhapus");
+      await apiClient.delete(
+        `${API_ENDPOINTS.TRANSAKSI.DELETE}/${selectedItemToDelete}`,
+      );
+      toastStore.success(
+        `Data transaksi berhasil dihapus dari sistem.`,
+        "Terhapus",
+      );
       selectedItemToDelete = null;
       fetchTransactions();
     } catch (error) {
@@ -301,29 +356,38 @@
 
   const getBadgeVariant = (status: string) => {
     switch (status?.toLowerCase()) {
-      case "success": return "success";
-      case "pending": return "warning";
-      case "failed": return "danger";
-      case "duplicate": return "secondary";
-      default: return "secondary";
+      case "success":
+        return "success";
+      case "pending":
+        return "warning";
+      case "failed":
+        return "danger";
+      case "duplicate":
+        return "secondary";
+      default:
+        return "secondary";
     }
   };
 
   function formatDate(isoString: string) {
     if (!isoString) return "-";
     const date = new Date(isoString);
-    return new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric" }).format(date);
+    return new Intl.DateTimeFormat("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(date);
   }
 
   // ===========================================================================
   // --- 12. REACTIVE EFFECTS ($effect)
   // ===========================================================================
-  
+
   // Debounce Search
   const applySearch = debounce(() => handleFilterChange(), 500);
   $effect(() => {
-    searchValue; 
-    applySearch(); 
+    searchValue;
+    applySearch();
   });
 
   // Auto-apply Date Range
@@ -410,10 +474,38 @@
   </div>
   <div class="w-full min-w-0">
     <div class="hidden md:grid lg:grid-cols-4 md:gap-4 lg:gap-6 w-full">
-      <SummaryCard label="Total Donasi" value={formatNumber(summary.total_donasi, "currency")} icon={CircleDollarSign} trend={summary.trend_donasi >= 0 ? "up" : "down"} trendValue={`${formatTrend(summary.trend_donasi)} ${trendText}`} variant="primary" />
-      <SummaryCard label="Total Transaksi" value={summary.total_transaksi} icon={CreditCard} trend={summary.trend_transaksi >= 0 ? "up" : "down"} trendValue={`${formatTrend(summary.trend_transaksi)} ${trendText}`} variant="default" />
-      <SummaryCard label="Donatur Unik" value={summary.donatur_unik} icon={Users} trend={summary.trend_donatur >= 0 ? "up" : "down"} trendValue={`${formatTrend(summary.trend_donatur)} ${trendText}`} variant="warning" />
-      <SummaryCard label="Rata-rata / Transaksi" value={formatNumber(summary.rata_rata_donasi, "currency")} icon={Activity} trend={summary.trend_rata_rata >= 0 ? "up" : "down"} trendValue={`${formatTrend(summary.trend_rata_rata)} ${trendText}`} variant="success" />
+      <SummaryCard
+        label="Total Donasi"
+        value={formatNumber(summary.total_donasi, "currency")}
+        icon={CircleDollarSign}
+        trend={summary.trend_donasi >= 0 ? "up" : "down"}
+        trendValue={`${formatTrend(summary.trend_donasi)} ${trendText}`}
+        variant="primary"
+      />
+      <SummaryCard
+        label="Total Transaksi"
+        value={summary.total_transaksi}
+        icon={CreditCard}
+        trend={summary.trend_transaksi >= 0 ? "up" : "down"}
+        trendValue={`${formatTrend(summary.trend_transaksi)} ${trendText}`}
+        variant="default"
+      />
+      <SummaryCard
+        label="Donatur Unik"
+        value={summary.donatur_unik}
+        icon={Users}
+        trend={summary.trend_donatur >= 0 ? "up" : "down"}
+        trendValue={`${formatTrend(summary.trend_donatur)} ${trendText}`}
+        variant="warning"
+      />
+      <SummaryCard
+        label="Rata-rata / Transaksi"
+        value={formatNumber(summary.rata_rata_donasi, "currency")}
+        icon={Activity}
+        trend={summary.trend_rata_rata >= 0 ? "up" : "down"}
+        trendValue={`${formatTrend(summary.trend_rata_rata)} ${trendText}`}
+        variant="success"
+      />
     </div>
 
     <div class="block md:hidden w-full">
@@ -445,12 +537,29 @@
     </div>
   </div>
   <Card>
-    <CardHeader title="Tabel Transaksi" description="Lihat dan kelola semua transaksi donasi yang telah masuk." icon={ReceiptText} iconColor="text-(--color-primary)" class="hidden md:block">
+    <CardHeader
+      title="Tabel Transaksi"
+      description="Lihat dan kelola semua transaksi donasi yang telah masuk."
+      icon={ReceiptText}
+      iconColor="text-(--color-primary)"
+      class="hidden md:block"
+    >
       {#snippet action()}
-        <DateRangePicker bind:startDate bind:endDate align="right" class="flex-1 md:flex-none" />
+        <DateRangePicker
+          bind:startDate
+          bind:endDate
+          align="right"
+          class="flex-1 md:flex-none"
+        />
       {/snippet}
     </CardHeader>
-    <CardHeader title="Tabel Transaksi" description="Lihat dan kelola semua transaksi donasi yang telah masuk." icon={ReceiptText} iconColor="text-(--color-primary)" class="block md:hidden" />
+    <CardHeader
+      title="Tabel Transaksi"
+      description="Lihat dan kelola semua transaksi donasi yang telah masuk."
+      icon={ReceiptText}
+      iconColor="text-(--color-primary)"
+      class="block md:hidden"
+    />
     <CardContent class="pb-3">
       <TableToolbar
         bind:searchValue
@@ -460,12 +569,21 @@
         actionsClass="flex items-center gap-2"
         filterButtonClass="flex items-center gap-2"
         filterLabelClass="hidden sm:inline"
-        filterActive={selectedPrograms.length > 0 || selectedRekenings.length > 0 || selectedSumbers.length > 0 || !!selectedStatus || !!selectedScopeMode || isNominalFilterActive}
+        filterActive={selectedPrograms.length > 0 ||
+          selectedRekenings.length > 0 ||
+          selectedSumbers.length > 0 ||
+          !!selectedStatus ||
+          !!selectedScopeMode ||
+          isNominalFilterActive}
         onResetFilter={resetFilters}
         onApplyFilter={applyModalFilter}
       >
         {#snippet extraActions()}
-          <Button variant="primary" onclick={handleExport} class="flex items-center gap-2">
+          <Button
+            variant="primary"
+            onclick={handleExport}
+            class="flex items-center gap-2"
+          >
             <Download size={16} /> <span class="hidden sm:inline">Ekspor</span>
           </Button>
         {/snippet}
@@ -475,37 +593,85 @@
             <div class="flex flex-col gap-4">
               {#if !isKoordinatorCS}
                 <div class="flex flex-col gap-2">
-                  <Select label="Filter Cakupan" options={scopeOptions} bind:value={selectedScopeMode} placeholder="Semua Scope" />
+                  <Select
+                    label="Filter Cakupan"
+                    options={scopeOptions}
+                    bind:value={selectedScopeMode}
+                    placeholder="Semua Scope"
+                  />
                 </div>
               {/if}
 
               <div class="flex flex-col gap-2">
-                <Select label="Status Transaksi" options={statuses} bind:value={selectedStatus} placeholder="Semua Status" />
+                <Select
+                  label="Status Transaksi"
+                  options={statuses}
+                  bind:value={selectedStatus}
+                  placeholder="Semua Status"
+                />
               </div>
 
               <div class="flex flex-col gap-2">
-                <MultiSelect label="Program" options={programOptions} bind:values={selectedPrograms} placeholder="Pilih program" searchPlaceholder="Cari program..." />
+                <MultiSelect
+                  label="Program"
+                  options={programOptions}
+                  bind:values={selectedPrograms}
+                  placeholder="Pilih program"
+                  searchPlaceholder="Cari program..."
+                />
               </div>
             </div>
 
             <div class="flex flex-col gap-2">
-              <MultiSelect label="Rekening" options={rekeningOptions} bind:values={selectedRekenings} placeholder="Pilih rekening" searchPlaceholder="Cari rekening..." />
+              <MultiSelect
+                label="Rekening"
+                options={rekeningOptions}
+                bind:values={selectedRekenings}
+                placeholder="Pilih rekening"
+                searchPlaceholder="Cari rekening..."
+              />
             </div>
 
             <div class="flex flex-col gap-2">
-              <MultiSelect label="Sumber Transaksi" options={sumberOptions} bind:values={selectedSumbers} placeholder="Pilih sumber" searchPlaceholder="Cari sumber..." />
+              <MultiSelect
+                label="Sumber Transaksi"
+                options={sumberOptions}
+                bind:values={selectedSumbers}
+                placeholder="Pilih sumber"
+                searchPlaceholder="Cari sumber..."
+              />
             </div>
 
             <div class="flex flex-col gap-2">
-              <span class="text-sm font-medium text-(--color-text-secondary)">Nominal</span>
+              <span class="text-sm font-medium text-(--color-text-secondary)"
+                >Nominal</span
+              >
               <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <Select options={nominalOperators} bind:value={selectedNominalOperator} placeholder="Pilih operator" />
+                <Select
+                  options={nominalOperators}
+                  bind:value={selectedNominalOperator}
+                  placeholder="Pilih operator"
+                />
 
                 {#if selectedNominalOperator === "between"}
-                  <CurrencyInput bind:value={nominalFrom} placeholder="Nominal dari" currencyPrefix="Rp" />
-                  <CurrencyInput bind:value={nominalTo} placeholder="Nominal sampai" currencyPrefix="Rp" />
+                  <CurrencyInput
+                    bind:value={nominalFrom}
+                    placeholder="Nominal dari"
+                    currencyPrefix="Rp"
+                  />
+                  <CurrencyInput
+                    bind:value={nominalTo}
+                    placeholder="Nominal sampai"
+                    currencyPrefix="Rp"
+                  />
                 {:else}
-                  <CurrencyInput bind:value={nominalValue} placeholder="Masukkan nominal" currencyPrefix="Rp" class="md:col-span-2" disabled={!selectedNominalOperator} />
+                  <CurrencyInput
+                    bind:value={nominalValue}
+                    placeholder="Masukkan nominal"
+                    currencyPrefix="Rp"
+                    class="md:col-span-2"
+                    disabled={!selectedNominalOperator}
+                  />
                 {/if}
               </div>
             </div>
@@ -530,29 +696,55 @@
               <TableRow>
                 <TableCell>
                   <div class="flex flex-col gap-1">
-                    <span class="font-bold text-sm text-gray-900 leading-none">{formatDate(trx.tanggal_transaksi)}</span>
-                    <span class="text-xs text-gray-500 font-medium">{trx.id}</span>
+                    <span class="font-bold text-sm text-gray-900 leading-none"
+                      >{formatDate(trx.tanggal_transaksi)}</span
+                    >
+                    <span class="text-xs text-gray-500 font-medium"
+                      >{trx.id}</span
+                    >
                   </div>
                 </TableCell>
                 <TableCell>
                   <div class="flex flex-col gap-0.5">
-                    <span class="font-semibold text-sm leading-none text-gray-900">{trx.donatur?.nama_donatur || trx.nama_donatur || "Hamba Allah"}</span>
-                    <span class="text-xs text-gray-600">{trx.donatur?.nomor_hp_donatur || trx.nomor_hp_donatur || "-"}</span>
+                    <span
+                      class="font-semibold text-sm leading-none text-gray-900"
+                      >{trx.donatur?.nama_donatur ||
+                        trx.nama_donatur ||
+                        "Hamba Allah"}</span
+                    >
+                    <span class="text-xs text-gray-600"
+                      >{trx.donatur?.nomor_hp_donatur ||
+                        trx.nomor_hp_donatur ||
+                        "-"}</span
+                    >
                   </div>
                 </TableCell>
                 <TableCell>
                   <div class="flex flex-col items-start gap-1.5">
-                    <span class="font-bold text-sm text-gray-900 leading-none">Rp {formatNumber(trx.nominal, "standard")}</span>
-                    <Badge variant={getBadgeVariant(trx.status)} size="sm" class="text-[10px] uppercase tracking-wider">
+                    <span class="font-bold text-sm text-gray-900 leading-none"
+                      >Rp {formatNumber(trx.nominal, "standard")}</span
+                    >
+                    <Badge
+                      variant={getBadgeVariant(trx.status)}
+                      size="sm"
+                      class="text-[10px] uppercase tracking-wider"
+                    >
                       {statusLabels[trx.status?.toLowerCase()] || trx.status}
                     </Badge>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div class="flex flex-col gap-0.5">
-                    <span class="font-semibold text-sm leading-none text-gray-900">{trx.program?.nama_program || "-"}</span>
-                    <span class="text-[10px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded w-max mt-0.5">
-                      {trx.sumber?.nama_sumber || trx.sumber?.sumber_transaksi || "-"}
+                    <span
+                      class="font-semibold text-sm leading-none text-gray-900"
+                      >{trx.program?.nama_program || "-"}</span
+                    >
+                    <span
+                      class="text-[10px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded w-max mt-0.5"
+                    >
+                      {trx.sumber?.nama_sumber ||
+                        trx.sumber?.sumber_transaksi ||
+                        "-"}
                     </span>
                   </div>
                 </TableCell>
@@ -563,10 +755,22 @@
                         <Ellipsis size={20} />
                       </Button>
                     {/snippet}
-                    <DropdownItem icon={Eye} onclick={() => console.log("Detail", trx.id)}>Lihat Detail</DropdownItem>
-                    <DropdownItem icon={Pencil} onclick={() => goto(`/transaksi/edit/${trx.id}`)}>Ubah Data</DropdownItem>
+                    <DropdownItem
+                      icon={Eye}
+                      onclick={() => goto(ROUTES.TRANSAKSI.DETAIL(trx.id))}
+                      >Lihat Detail</DropdownItem
+                    >
+                    <DropdownItem
+                      icon={Pencil}
+                      onclick={() => goto(ROUTES.TRANSAKSI.EDIT(trx.id))}
+                      >Ubah Data</DropdownItem
+                    >
                     <div class="border-t border-(--color-border) my-1"></div>
-                    <DropdownItem icon={Trash2} variant="danger" onclick={() => confirmDelete(trx.id)}>Hapus</DropdownItem>
+                    <DropdownItem
+                      icon={Trash2}
+                      variant="danger"
+                      onclick={() => confirmDelete(trx.id)}>Hapus</DropdownItem
+                    >
                   </Dropdown>
                 </TableCell>
               </TableRow>
@@ -576,8 +780,12 @@
                   {#if isLoading}
                     <LoadingBars size={50} class="text-(--color-primary)" />
                   {:else}
-                    <div class="flex flex-col items-center justify-center text-gray-400">
-                      <span class="text-sm">Tidak ada transaksi yang ditemukan.</span>
+                    <div
+                      class="flex flex-col items-center justify-center text-gray-400"
+                    >
+                      <span class="text-sm"
+                        >Tidak ada transaksi yang ditemukan.</span
+                      >
                     </div>
                   {/if}
                 </TableCell>
@@ -589,9 +797,48 @@
 
       <div class="md:hidden flex flex-col bg-gray-50/30 gap-3">
         {#each transactions as trx (trx.id)}
-          <SimpleTableCard name={trx.donatur?.nama_donatur || trx.nama_donatur || "Hamba Allah"} phone={trx.donatur?.nomor_hp_donatur || trx.nomor_hp_donatur || "-"} program={trx.program?.nama_program || "-"} date={formatDate(trx.tanggal_transaksi)} amount={formatNumber(trx.nominal, "standard")} statusLabel={statusLabels[trx.status?.toLowerCase()] || trx.status} statusVariant={getBadgeVariant(trx.status)} />
+          <SimpleTableCard
+            name={trx.donatur?.nama_donatur ||
+              trx.nama_donatur ||
+              "Hamba Allah"}
+            phone={trx.donatur?.nomor_hp_donatur || trx.nomor_hp_donatur || "-"}
+            program={trx.program?.nama_program || "-"}
+            date={formatDate(trx.tanggal_transaksi)}
+            amount={formatNumber(trx.nominal, "standard")}
+            statusLabel={statusLabels[trx.status?.toLowerCase()] || trx.status}
+            statusVariant={getBadgeVariant(trx.status)}
+            onclick={() => goto(ROUTES.TRANSAKSI.DETAIL(trx.id))}
+          >
+            {#snippet actions()}
+              <Dropdown width="w-36" align="right">
+                {#snippet trigger()}
+                  <Button variant="ghost" size="sm" class="p-0!">
+                    <Ellipsis size={18} />
+                  </Button>
+                {/snippet}
+                <DropdownItem
+                  icon={Eye}
+                  onclick={() => goto(ROUTES.TRANSAKSI.DETAIL(trx.id))}
+                  >Lihat Detail</DropdownItem
+                >
+                <DropdownItem
+                  icon={Pencil}
+                  onclick={() => goto(ROUTES.TRANSAKSI.EDIT(trx.id))}
+                  >Ubah Data</DropdownItem
+                >
+                <div class="border-t border-(--color-border) my-1"></div>
+                <DropdownItem
+                  icon={Trash2}
+                  variant="danger"
+                  onclick={() => confirmDelete(trx.id)}>Hapus</DropdownItem
+                >
+              </Dropdown>
+            {/snippet}
+          </SimpleTableCard>
         {:else}
-          <div class="py-10 flex justify-center text-center text-sm text-gray-500 border border-dashed rounded-lg">
+          <div
+            class="py-10 flex justify-center text-center text-sm text-gray-500 border border-dashed rounded-lg"
+          >
             {#if isLoading}
               <LoadingBars size={35} class="text-(--color-primary)" />
             {:else}
@@ -605,16 +852,28 @@
       {#if transactions.length > 0}
         <div class="md:hidden w-full">
           {#if meta.page < meta.total_page}
-            <Button variant="outline" class="w-full py-2.5 text-sm" onclick={loadMore} disabled={isLoading}>
+            <Button
+              variant="outline"
+              class="w-full py-2.5 text-sm"
+              onclick={loadMore}
+              disabled={isLoading}
+            >
               {isLoading ? "Memuat..." : "Tampilkan Lebih Banyak"}
             </Button>
           {:else}
-            <p class="text-center text-xs text-gray-400">Semua data telah ditampilkan</p>
+            <p class="text-center text-xs text-gray-400">
+              Semua data telah ditampilkan
+            </p>
           {/if}
         </div>
 
         <div class="hidden md:block w-full">
-          <Pagination bind:currentPage={meta.page} bind:pageSize={meta.limit} totalPages={meta.total_page} totalData={meta.total_data} />
+          <Pagination
+            bind:currentPage={meta.page}
+            bind:pageSize={meta.limit}
+            totalPages={meta.total_page}
+            totalData={meta.total_data}
+          />
         </div>
       {/if}
     </CardFooter>
@@ -623,14 +882,22 @@
 
 <Modal bind:open={showDeleteModal} size="sm">
   <div class="flex flex-col items-center text-center pt-4 pb-2">
-    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+    <div
+      class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4"
+    >
       <TriangleAlert size={24} strokeWidth={2} />
     </div>
     <h3 class="text-lg font-bold text-gray-900 mb-2">Hapus Transaksi?</h3>
   </div>
 
   {#snippet footer()}
-    <Button variant="outline" class="w-full" onclick={() => (showDeleteModal = false)}>Batal</Button>
-    <Button variant="danger" class="w-full" onclick={executeDelete}>Ya, Hapus Data</Button>
+    <Button
+      variant="outline"
+      class="w-full"
+      onclick={() => (showDeleteModal = false)}>Batal</Button
+    >
+    <Button variant="danger" class="w-full" onclick={executeDelete}
+      >Ya, Hapus Data</Button
+    >
   {/snippet}
 </Modal>

@@ -1,13 +1,50 @@
 <script lang="ts">
   import { formatNumber } from "$lib/utils/formatter";
+  import { ROUTES } from "$lib/constans/routes";
   import { goto } from "$app/navigation";
-  import { Plus, CircleDollarSign, Users, CreditCard, Activity, Calendar, Trophy, Clock, TrendingUp, PieChart, BarChart3 } from "lucide-svelte";
+  import {
+    Plus,
+    CircleDollarSign,
+    Users,
+    CreditCard,
+    Activity,
+    Calendar,
+    Trophy,
+    Clock,
+    TrendingUp,
+    PieChart,
+    BarChart3,
+  } from "lucide-svelte";
 
-  import { Card, CardHeader, CardContent, SummaryCard, ProgressCard, SimpleTableCard, MobileOverviewCard, LeaderboardItem } from "$lib/components/ui/card";
-  import { Button, SegmentedControl, FloatingActionButton } from "$lib/components/ui/button";
-  import { AreaChart, DonutChart, HorizontalBarChart } from "$lib/components/ui/chart";
-  import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "$lib/components/ui/table";
-  import  Badge  from "$lib/components/ui/badge/Badge.svelte";
+  import {
+    Card,
+    CardHeader,
+    CardContent,
+    SummaryCard,
+    ProgressCard,
+    SimpleTableCard,
+    MobileOverviewCard,
+    LeaderboardItem,
+  } from "$lib/components/ui/card";
+  import {
+    Button,
+    SegmentedControl,
+    FloatingActionButton,
+  } from "$lib/components/ui/button";
+  import {
+    AreaChart,
+    DonutChart,
+    HorizontalBarChart,
+  } from "$lib/components/ui/chart";
+  import {
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+  } from "$lib/components/ui/table";
+  import Badge from "$lib/components/ui/badge/Badge.svelte";
 
   // --- STATE & AUTH SIMULATION ---
   let userRole = $state("koordinator_cs");
@@ -19,10 +56,50 @@
   ];
 
   // --- CLEAN INTEGER DATA ---
-  const trenCategories = [ "01 Apr", "02 Apr", "03 Apr", "04 Apr", "05 Apr", "06 Apr", "07 Apr", "08 Apr", "09 Apr", "10 Apr", "11 Apr", "12 Apr", "13 Apr", "14 Apr", "15 Apr", "16 Apr", "17 Apr", "18 Apr", "19 Apr", "20 Apr", "21 Apr", "22 Apr", "23 Apr", "24 Apr", "25 Apr", "26 Apr", "27 Apr", "28 Apr", "29 Apr", "30 Apr"];
+  const trenCategories = [
+    "01 Apr",
+    "02 Apr",
+    "03 Apr",
+    "04 Apr",
+    "05 Apr",
+    "06 Apr",
+    "07 Apr",
+    "08 Apr",
+    "09 Apr",
+    "10 Apr",
+    "11 Apr",
+    "12 Apr",
+    "13 Apr",
+    "14 Apr",
+    "15 Apr",
+    "16 Apr",
+    "17 Apr",
+    "18 Apr",
+    "19 Apr",
+    "20 Apr",
+    "21 Apr",
+    "22 Apr",
+    "23 Apr",
+    "24 Apr",
+    "25 Apr",
+    "26 Apr",
+    "27 Apr",
+    "28 Apr",
+    "29 Apr",
+    "30 Apr",
+  ];
 
-  const trenSeries = [ { name: "Nominal Donasi",
-      data: [ 4200000, 5100000, 12500000, 6000000, 1500000, 3800000, 4500000, 4100000, 5800000, 14200000, 7100000, 1200000, 4000000, 3500000, 4800000, 6200000, 13800000, 5500000, 1800000, 4500000, 5200000, 4900000, 6500000, 15500000, 8000000, 2000000, 5000000, 4800000, 5500000, 6800000], }, ];
+  const trenSeries = [
+    {
+      name: "Nominal Donasi",
+      data: [
+        4200000, 5100000, 12500000, 6000000, 1500000, 3800000, 4500000, 4100000,
+        5800000, 14200000, 7100000, 1200000, 4000000, 3500000, 4800000, 6200000,
+        13800000, 5500000, 1800000, 4500000, 5200000, 4900000, 6500000,
+        15500000, 8000000, 2000000, 5000000, 4800000, 5500000, 6800000,
+      ],
+    },
+  ];
 
   const danaLabels = ["Zakat", "Wakaf", "Infaq", "Hibah"];
   const danaSeries = [40, 30, 20, 10];
@@ -30,9 +107,60 @@
   const progCategories = ["Masjid", "Beasiswa", "Pangan", "Sumur"];
   const progSeries = [{ name: "Terkumpul (Juta)", data: [45, 32, 28, 15] }];
 
-  const recentTransactions = [ { id: "TRX-001", name: "Desy", phone: "6285888925417", program: "Pembangunan Masjid", amount: 100000, date: "03 Apr 2026 21:36", status: "Berhasil", }, { id: "TRX-002", name: "Taufik Rahman", phone: "6281367459860", program: "Beasiswa Tahfidz", amount: 10000, date: "03 Apr 2026 21:35", status: "Berhasil", }, { id: "TRX-003", name: "Darwing", phone: "6282112701983", program: "Wakaf Sumur", amount: 20000, date: "03 Apr 2026 21:35", status: "Berhasil", }, { id: "TRX-004", name: "Pak Budi", phone: "6285727701084", program: "Bantuan Pangan", amount: 10000, date: "03 Apr 2026 21:34", status: "Menunggu", }, { id: "TRX-005", name: "Padricha", phone: "6287730120549", program: "Zakat Fitrah", amount: 100000, date: "03 Apr 2026 21:34", status: "Berhasil", }];
+  const recentTransactions = [
+    {
+      id: "TRX-001",
+      name: "Desy",
+      phone: "6285888925417",
+      program: "Pembangunan Masjid",
+      amount: 100000,
+      date: "03 Apr 2026 21:36",
+      status: "Berhasil",
+    },
+    {
+      id: "TRX-002",
+      name: "Taufik Rahman",
+      phone: "6281367459860",
+      program: "Beasiswa Tahfidz",
+      amount: 10000,
+      date: "03 Apr 2026 21:35",
+      status: "Berhasil",
+    },
+    {
+      id: "TRX-003",
+      name: "Darwing",
+      phone: "6282112701983",
+      program: "Wakaf Sumur",
+      amount: 20000,
+      date: "03 Apr 2026 21:35",
+      status: "Berhasil",
+    },
+    {
+      id: "TRX-004",
+      name: "Pak Budi",
+      phone: "6285727701084",
+      program: "Bantuan Pangan",
+      amount: 10000,
+      date: "03 Apr 2026 21:34",
+      status: "Menunggu",
+    },
+    {
+      id: "TRX-005",
+      name: "Padricha",
+      phone: "6287730120549",
+      program: "Zakat Fitrah",
+      amount: 100000,
+      date: "03 Apr 2026 21:34",
+      status: "Berhasil",
+    },
+  ];
 
-  const topDonors = [ { name: "Hamba Allah", total: 15000000, count: 3 }, { name: "Keluarga Bapak Budi", total: 12500000, count: 1 }, { name: "PT. Maju Mundur", total: 10000000, count: 2 }, { name: "Rina Gunawan", total: 5000000, count: 5 }];
+  const topDonors = [
+    { name: "Hamba Allah", total: 15000000, count: 3 },
+    { name: "Keluarga Bapak Budi", total: 12500000, count: 1 },
+    { name: "PT. Maju Mundur", total: 10000000, count: 2 },
+    { name: "Rina Gunawan", total: 5000000, count: 5 },
+  ];
 
   const maxTopDonorTotal = Math.max(
     ...topDonors.map((donor) => donor.total),
@@ -46,9 +174,15 @@
   }
 </script>
 
-<div class="max-w-full mx-auto flex flex-col gap-4 md:gap-6 w-full overflow-x-hidden" >
-  <div class="flex flex-col md:flex-row justify-between items-end md:items-center w-full gap-4" >
-    <div class="flex flex-row-reverse md:flex-row items-center gap-2 sm:gap-3 text-gray-800 min-w-0 w-full md:w-auto order-1" >
+<div
+  class="max-w-full mx-auto flex flex-col gap-4 md:gap-6 w-full overflow-x-hidden"
+>
+  <div
+    class="flex flex-col md:flex-row justify-between items-end md:items-center w-full gap-4"
+  >
+    <div
+      class="flex flex-row-reverse md:flex-row items-center gap-2 sm:gap-3 text-gray-800 min-w-0 w-full md:w-auto order-1"
+    >
       <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <Calendar size={20} class="text-(--color-primary) sm:w-5.5 sm:h-5.5" />
         <h2 class="text-lg sm:text-xl font-bold tracking-tight">April 2026</h2>
@@ -72,7 +206,7 @@
         <Button
           variant="primary"
           class="flex justify-center items-center gap-2 px-4 shadow-sm cursor-pointer"
-          onclick={() => goto("/input-donasi")}
+          onclick={() => goto(ROUTES.INPUT_DONASI)}
         >
           <Plus size={16} />
           <span>Input Donasi</span>
@@ -176,8 +310,12 @@
     </div>
   </div>
 
-  <div class="flex flex-col lg:grid lg:grid-cols-3 gap-4 md:gap-6 items-start w-full min-w-0" >
-    <div class="order-1 lg:order-2 flex flex-col gap-4 md:gap-6 w-full lg:col-span-1 min-w-0" >
+  <div
+    class="flex flex-col lg:grid lg:grid-cols-3 gap-4 md:gap-6 items-start w-full min-w-0"
+  >
+    <div
+      class="order-1 lg:order-2 flex flex-col gap-4 md:gap-6 w-full lg:col-span-1 min-w-0"
+    >
       <HorizontalBarChart
         title="Top 4 Program"
         subtitle="Program dengan donasi terbesar"
@@ -216,9 +354,17 @@
     </div>
 
     <Card class="order-2 lg:order-1 w-full lg:col-span-2 h-full min-w-0">
-      <CardHeader title="Transaksi Terbaru" description="5 transaksi terakhir yang masuk" icon={Clock} iconColor="text-gray-500" class="pb-2" >
+      <CardHeader
+        title="Transaksi Terbaru"
+        description="5 transaksi terakhir yang masuk"
+        icon={Clock}
+        iconColor="text-gray-500"
+        class="pb-2"
+      >
         {#snippet action()}
-          <button class="text-sm font-medium text-(--color-primary) hover:underline focus:outline-none">
+          <button
+            class="text-sm font-medium text-(--color-primary) hover:underline focus:outline-none"
+          >
             Lihat Semua
           </button>
         {/snippet}
@@ -282,6 +428,6 @@
   <FloatingActionButton
     icon={Plus}
     ariaLabel="Input Donasi"
-    onclick={() => goto("/input-donasi")}
+    onclick={() => goto(ROUTES.INPUT_DONASI)}
   />
 </div>

@@ -7,6 +7,7 @@
   import { toastStore } from "$lib/stores/toast.svelte";
   import Toast from "$lib/components/ui/toast/Toast.svelte";
   import LoadingBars from "$lib/components/ui/loading/LoadingBars.svelte";
+  import { ROUTES } from "$lib/constans/routes";
   import { goto } from "$app/navigation";
 
   import { QueryClient, QueryClientProvider } from "@tanstack/svelte-query";
@@ -24,7 +25,7 @@
     },
   });
 
-  const isAuthPage = $derived(page.url.pathname.startsWith("/login"));
+  const isAuthPage = $derived(page.url.pathname.startsWith(ROUTES.LOGIN));
   let isCheckingAuth = $state(true);
 
   // [BARU] 1. State dinamis untuk menggantikan variabel 'user' yang hardcode
@@ -41,9 +42,9 @@
       const userStr = localStorage.getItem("admin_user");
 
       if (!token && !isAuthPage) {
-        goto("/login");
+        goto(ROUTES.LOGIN);
       } else if (token && isAuthPage) {
-        goto("/dashboard");
+        goto(ROUTES.DASHBOARD);
       } else {
         if (token && userStr) {
           try {

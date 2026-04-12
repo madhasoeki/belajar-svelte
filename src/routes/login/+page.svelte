@@ -4,6 +4,7 @@
   import Button from "$lib/components/ui/button/Button.svelte";
   import Alert from "$lib/components/ui/alert/Alert.svelte"; // Sesuaikan path jika berbeda
   import { toastStore } from "$lib/stores/toast.svelte";
+  import { ROUTES } from "$lib/constans/routes";
   import { apiClient } from "$lib/utils/api";
   import { API_ENDPOINTS } from "$lib/constans/endpoints";
   import { goto } from "$app/navigation";
@@ -53,7 +54,7 @@
           localStorage.setItem("admin_user", JSON.stringify(user));
         }
         toastStore.success("Login berhasil. Selamat datang!", "Sukses");
-        goto("/dashboard");
+        goto(ROUTES.DASHBOARD);
       } else {
         throw new Error("Token tidak ditemukan dari server.");
       }

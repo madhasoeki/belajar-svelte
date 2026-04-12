@@ -25,6 +25,7 @@
   }: DatePickerProps = $props();
 
   let isOpen = $state(false);
+  const overlayId = `datepicker-${Math.random().toString(36).slice(2, 9)}`;
   let triggerId = `datepicker-${Math.random().toString(36).slice(2, 9)}`;
   let triggerButton: HTMLButtonElement | null = null;
   let popoverStyle = $state("");
@@ -89,13 +90,28 @@
 
   function openPopover() {
     if (disabled) return;
-    isOpen = !isOpen;
-    if (isOpen) {
+    const nextOpen = !isOpen;
+    if (nextOpen && typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("ui:overlay-open", {
+          detail: { id: overlayId, type: "datepicker" },
+        }),
+      );
+    }
+
+    isOpen = nextOpen;
+    if (nextOpen) {
       pendingDate = value;
       viewDate = value ? new Date(value) : new Date();
       updatePopoverPosition();
       requestAnimationFrame(updatePopoverPosition);
     }
+  }
+
+  function handleOverlayOpen(event: Event) {
+    const detail = (event as CustomEvent<{ id?: string }>).detail;
+    if (!detail || detail.id === overlayId) return;
+    isOpen = false;
   }
 
   $effect(() => {
@@ -107,6 +123,13 @@
       window.removeEventListener("resize", handleViewportChange);
       window.removeEventListener("scroll", handleViewportChange, true);
     };
+  });
+
+  $effect(() => {
+    const onOverlayOpen = (event: Event) => handleOverlayOpen(event);
+    window.addEventListener("ui:overlay-open", onOverlayOpen as EventListener);
+    return () =>
+      window.removeEventListener("ui:overlay-open", onOverlayOpen as EventListener);
   });
 
   function clickOutside(node: HTMLElement) {

@@ -35,6 +35,7 @@
   }: SelectProps = $props();
 
   let isOpen = $state(false);
+  const overlayId = `select-${Math.random().toString(36).slice(2, 9)}`;
   let container: HTMLElement;
   let triggerButton = $state<HTMLButtonElement | null>(null);
   let searchQuery = $state("");
@@ -56,8 +57,16 @@
 
   function toggleOpen() {
     if (!disabled) {
-      isOpen = !isOpen;
-      if (isOpen) {
+      const nextOpen = !isOpen;
+      if (nextOpen && typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("ui:overlay-open", {
+            detail: { id: overlayId, type: "select" },
+          }),
+        );
+      }
+      isOpen = nextOpen;
+      if (nextOpen) {
         searchQuery = "";
         updateDropdownPosition();
       }
@@ -73,6 +82,12 @@
     if (isOpen && container && !container.contains(event.target as Node)) {
       isOpen = false;
     }
+  }
+
+  function handleOverlayOpen(event: Event) {
+    const detail = (event as CustomEvent<{ id?: string }>).detail;
+    if (!detail || detail.id === overlayId) return;
+    isOpen = false;
   }
 
   function updateDropdownPosition() {
@@ -108,6 +123,13 @@
     if (isOpen && searchInputEl) {
       requestAnimationFrame(() => searchInputEl?.focus());
     }
+  });
+
+  $effect(() => {
+    const onOverlayOpen = (event: Event) => handleOverlayOpen(event);
+    window.addEventListener("ui:overlay-open", onOverlayOpen as EventListener);
+    return () =>
+      window.removeEventListener("ui:overlay-open", onOverlayOpen as EventListener);
   });
 
   $effect(() => {

@@ -34,6 +34,7 @@
   }: MultiSelectProps = $props();
 
   let isOpen = $state(false);
+  const overlayId = `multiselect-${Math.random().toString(36).slice(2, 9)}`;
   let searchQuery = $state("");
   let inputRef = $state<HTMLInputElement | null>(null);
   let triggerButton = $state<HTMLButtonElement | null>(null);
@@ -71,12 +72,26 @@
 
   function openDropdown() {
     if (disabled) return;
-    isOpen = !isOpen;
-    if (isOpen) {
+    const nextOpen = !isOpen;
+    if (nextOpen && typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("ui:overlay-open", {
+          detail: { id: overlayId, type: "multiselect" },
+        }),
+      );
+    }
+    isOpen = nextOpen;
+    if (nextOpen) {
       searchQuery = ""; // Reset pencarian saat dibuka
       updateDropdownPosition();
       requestAnimationFrame(() => inputRef?.focus()); // Fokus ke search bar otomatis
     }
+  }
+
+  function handleOverlayOpen(event: Event) {
+    const detail = (event as CustomEvent<{ id?: string }>).detail;
+    if (!detail || detail.id === overlayId) return;
+    isOpen = false;
   }
 
   function updateDropdownPosition() {
@@ -129,6 +144,13 @@
       window.removeEventListener("resize", syncPosition);
       window.removeEventListener("scroll", syncPosition, true);
     };
+  });
+
+  $effect(() => {
+    const onOverlayOpen = (event: Event) => handleOverlayOpen(event);
+    window.addEventListener("ui:overlay-open", onOverlayOpen as EventListener);
+    return () =>
+      window.removeEventListener("ui:overlay-open", onOverlayOpen as EventListener);
   });
 </script>
 

@@ -16,7 +16,8 @@
     statusVariant?: "success" | "warning" | "danger" | "default" | string | any;
     
     // [UPDATE 2] Daftarkan actions sebagai Snippet (opsional)
-    actions?: Snippet; 
+    actions?: Snippet;
+    onclick?: () => void;
   }
 
   let {
@@ -31,10 +32,27 @@
     
     // [UPDATE 3] Ekstrak actions dari $props()
     actions,
+    onclick,
   }: Props = $props();
+
+  const isClickable = $derived(typeof onclick === "function");
 </script>
 
-<Card>
+<Card
+  class={isClickable
+    ? "cursor-pointer transition-transform active:scale-[0.99]"
+    : ""}
+  onclick={onclick}
+  role={isClickable ? "button" : undefined}
+  tabindex={isClickable ? 0 : undefined}
+  onkeydown={(e) => {
+    if (!isClickable) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onclick?.();
+    }
+  }}
+>
   <CardContent class="pt-3 pb-3 px-3">
     <div class="flex justify-between items-start gap-2">
       <div class="flex flex-wrap items-baseline gap-x-1.5">

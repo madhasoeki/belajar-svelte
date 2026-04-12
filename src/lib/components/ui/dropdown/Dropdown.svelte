@@ -17,13 +17,22 @@
   }: DropdownProps = $props();
 
   let isOpen = $state(false);
+  const overlayId = `dropdown-${Math.random().toString(36).slice(2, 9)}`;
   let container: HTMLDivElement;
   let triggerElement = $state<HTMLDivElement | null>(null);
   let dropdownElement = $state<HTMLDivElement | null>(null);
   let dropdownStyle = $state("");
 
   function toggleOpen() {
-    isOpen = !isOpen;
+    const nextOpen = !isOpen;
+    if (nextOpen && typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("ui:overlay-open", {
+          detail: { id: overlayId, type: "dropdown" },
+        }),
+      );
+    }
+    isOpen = nextOpen;
   }
 
   function updateDropdownPosition() {
@@ -65,8 +74,18 @@
       }
     };
 
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
+    const handleOverlayOpen = (event: Event) => {
+      const detail = (event as CustomEvent<{ id?: string }>).detail;
+      if (!detail || detail.id === overlayId) return;
+      isOpen = false;
+    };
+
+    document.addEventListener("click", handleClickOutside, true);
+    window.addEventListener("ui:overlay-open", handleOverlayOpen as EventListener);
+    return () => {
+      document.removeEventListener("click", handleClickOutside, true);
+      window.removeEventListener("ui:overlay-open", handleOverlayOpen as EventListener);
+    };
   });
 
   $effect(() => {
@@ -88,10 +107,18 @@
 <div class="relative inline-block" bind:this={container}>
   <div
     bind:this={triggerElement}
-    onclick={toggleOpen}
+    onclick={(e) => {
+      e.stopPropagation();
+      toggleOpen();
+    }}
     role="button"
     tabindex="0"
-    onkeydown={(e) => (e.key === "Enter" || e.key === " ") && toggleOpen()}
+    onkeydown={(e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.stopPropagation();
+        toggleOpen();
+      }
+    }}
   >
     {@render trigger()}
   </div>

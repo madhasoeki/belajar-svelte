@@ -3,6 +3,7 @@
   import Avatar from "$lib/components/ui/avatar/Avatar.svelte";
   import { Bell, User, Settings, LogOut, Info } from "lucide-svelte";
   import { toastStore } from "$lib/stores/toast.svelte";
+  import { ROUTES } from "$lib/constans/routes";
   import { goto } from "$app/navigation";
   import { fade } from "svelte/transition";
 
@@ -33,7 +34,7 @@
     localStorage.removeItem("admin_token");
     localStorage.removeItem("admin_user"); // [BARU] Bersihkan data user
     toastStore.success("Berhasil keluar dari sistem.", "Logout");
-    goto("/login");
+    goto(ROUTES.LOGIN);
   }
 
   // Logika deteksi klik di luar elemen untuk menutup panel

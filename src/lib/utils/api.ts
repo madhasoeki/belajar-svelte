@@ -1,4 +1,5 @@
 import { PUBLIC_API_URL } from "$env/static/public";
+import { ROUTES } from "$lib/constans/routes";
 
 const shouldForceLogout = (status: number, errorData: any) => {
   if (status !== 401) return false;
@@ -12,10 +13,10 @@ const maybeRedirectToLogin = (status: number, errorData: any) => {
   if (
     shouldForceLogout(status, errorData) &&
     typeof window !== "undefined" &&
-    window.location.pathname !== "/login"
+    window.location.pathname !== ROUTES.LOGIN
   ) {
     localStorage.removeItem("admin_token");
-    window.location.href = "/login";
+    window.location.href = ROUTES.LOGIN;
   }
 };
 
